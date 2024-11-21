@@ -32,4 +32,10 @@ Each team member will have their own score.
 -   Ranj (Insert Last name)
 
 - Feature (Brainstorm)
-- Add name and features here
+Contact list
+  - Create new contact
+  - Show contact list
+  - send money to contact
+  - Transaction history
+ 
+
