@@ -24,5 +24,5 @@ Each team member will have their own score.
 - Are edge cases handled? (Think of what happens in common edge cases)
 - Is work merged to main branch
 
-## Team [Add your team name here]
+## Team [Yogurts]
 - Add name and features here
