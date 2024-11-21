@@ -25,4 +25,11 @@ Each team member will have their own score.
 - Is work merged to main branch
 
 ## Team [Yogurts]
+- Team members:
+-   Clark Batungbakal
+-   Alonzo Manosca
+-   Yuya Hamase
+-   Ranj (Insert Last name)
+
+- Feature (Brainstorm)
 - Add name and features here
