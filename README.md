@@ -32,10 +32,18 @@ Each team member will have their own score.
 -   Ranj (Insert Last name)
 
 - Feature (Brainstorm)
-Contact list
-  - Create new contact
-  - Show contact list
-  - send money to contact
-  - Transaction history
+Savings Goal Tracker
+  - Create savings goal: Allow users to set a new savings goal with details like target amount and deadline.
+    -  Endpoint: POST /savings-goals
+Team member: 
+  - Fetch all savings goals: Retrieve a list of all savings goals set by the user.
+    -  Endpoint: GET /savings-goals
+Team member: Clark Batungbakal
+  - Update savings goal progress: Allow users to update the current amount saved towards a specific goal.
+    -  Endpoint: PUT /savings-goals/:id/progress
+Team member:
+  - Delete savings goal: Allow users to delete a goal they no longer want to track.
+    -  Endpoint: DELETE /savings-goals/:id
+Team member: 
  
 
