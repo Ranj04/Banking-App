@@ -31,8 +31,7 @@ Each team member will have their own score.
 -   Yuya Hamase
 -   Ranj (Insert Last name)
 
-- Feature (Brainstorm)
-Savings Goal Tracker
+- Feature: Savings Goal Tracker
   - Create savings goal: Allow users to set a new savings goal with details like target amount and deadline.
     -  Endpoint: POST /savings-goals
     -  Team member: 
