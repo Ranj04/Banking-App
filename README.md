@@ -40,7 +40,7 @@ Each team member will have their own score.
     -  Team member: Clark Batungbakal
   - Update savings goal progress: Allow users to update the current amount saved towards a specific goal.
     -  Endpoint: PUT /savings-goals/:id/progress
-    -  Team member:
+    -  Team member: Alonzo Manosca
   - Delete savings goal: Allow users to delete a goal they no longer want to track.
     -  Endpoint: DELETE /savings-goals/:id
     -  Team member:
