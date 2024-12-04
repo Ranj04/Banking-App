@@ -45,13 +45,13 @@ Each team member will have their own score.
     -  Endpoint: DELETE /savings-goals/:id
     -  Team member:
 
- -Feature: Financing and Repay
-   -Financing
-     -add two variables to UserDto, debt and interest
-     -users can make a loan if they have no debt and upper limit of debt is twice of current balance
-     -I might add another requirement to make a loan
-   -Repay
-     -users can repay debt to bank here
-     -interest increases deepends on the amount of debt
-   -Team member: Yuya Hamase
+ - Feature: Financing and Repay
+   - Financing
+     -  add two variables to UserDto, debt and interest
+     -  users can make a loan if they have no debt and upper limit of debt is twice of current balance
+     -  I might add another requirement to make a loan
+   - Repay
+     -  users can repay debt to bank here
+     -  interest increases deepends on the amount of debt
+   -  Team member: Yuya Hamase
 
