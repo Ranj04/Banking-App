@@ -43,6 +43,15 @@ Each team member will have their own score.
     -  Team member:
   - Delete savings goal: Allow users to delete a goal they no longer want to track.
     -  Endpoint: DELETE /savings-goals/:id
-    -  Team member: 
- 
+    -  Team member:
+
+ -Feature: Financing and Repay
+   -Financing
+     -add two variables to UserDto, debt and interest
+     -users can make a loan if they have no debt and upper limit of debt is twice of current balance
+     -I might add another requirement to make a loan
+   -Repay
+     -users can repay debt to bank here
+     -interest increases deepends on the amount of debt
+   -Team member: Yuya Hamase
 
