@@ -41,10 +41,7 @@ Each team member will have their own score.
   - Update savings goal progress: Allow users to update the current amount saved towards a specific goal.
     -  Endpoint: PUT /savings-goals/:id/progress
     -  Team member: Alonzo Manosca
-  - Delete savings goal: Allow users to delete a goal they no longer want to track.
-    -  Endpoint: DELETE /savings-goals/:id
-    -  Team member:
-
+      
  - Feature: Financing and Repay
    - Financing
      -  add two variables to UserDto, debt and interest
