@@ -34,13 +34,13 @@ Each team member will have their own score.
 - Feature: Savings Goal Tracker
   - Create savings goal: Allow users to set a new savings goal with details like target amount and deadline.
     -  Endpoint: POST /savings-goals
-    -  Team member: 
+    -  Team member: Clark Batungbakal
   - Fetch all savings goals: Retrieve a list of all savings goals set by the user.
     -  Endpoint: GET /savings-goals
-    -  Team member: Clark Batungbakal
+    -  Team member: Alonzo Manosca
   - Update savings goal progress: Allow users to update the current amount saved towards a specific goal.
     -  Endpoint: PUT /savings-goals/:id/progress
-    -  Team member: Alonzo Manosca
+    -  Team member: 
       
  - Feature: Financing and Repay
    - Financing
