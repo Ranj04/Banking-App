@@ -40,7 +40,7 @@ Each team member will have their own score.
     -  Team member: Alonzo Manosca
   - Update savings goal progress: Allow users to update the current amount saved towards a specific goal.
     -  Endpoint: PUT /savings-goals/:id/progress
-    -  Team member: 
+    -  Team member: Ranj
       
  - Feature: Financing and Repay
    - Financing
