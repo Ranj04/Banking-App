@@ -41,10 +41,21 @@ public class UserDto extends BaseDto {
     }
 
     public Document toDocument() {
-        return null; // todo complete
+        var doc = new Document()
+                .append("balance", balance)
+                .append("userName", userName)
+                .append("password", password);
+        return doc;
     }
 
     public static UserDto fromDocument(Document match) {
-        return null; // todo complete
+        var userDto = new UserDto();
+        if (match.get("_id") != null) {
+            userDto.loadUniqueId(match);
+        }
+        userDto.balance = match.getDouble("balance");
+        userDto.setUserName(match.getString("userName"));
+        userDto.setPassword(match.getString("password"));
+        return userDto;
     }
 }

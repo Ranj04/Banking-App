@@ -31,7 +31,11 @@ public class UserDao extends BaseDao<UserDto> {
     }
 
     public List<UserDto> query(Document filter) {
-        return null; // todo complete
+        return collection.find(filter)
+                .into(new ArrayList<>())
+                .stream()
+                .map(UserDto::fromDocument)
+                .collect(Collectors.toList());
     }
 
 }

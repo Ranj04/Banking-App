@@ -32,7 +32,11 @@ public class TransactionDao extends BaseDao<TransactionDto> {
     }
 
     public List<TransactionDto> query(Document filter) {
-        return null; // todo complete
+        return collection.find(filter)
+                .into(new ArrayList<>())
+                .stream()
+                .map(TransactionDto::fromDocument)
+                .collect(Collectors.toList());
     }
 
 }

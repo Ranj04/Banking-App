@@ -19,6 +19,18 @@ public class CustomHttpResponse {
 
     // TODO fill this out
     public String toString() {
-        return  null;
+        String headerString = "";
+        for (Entry<String, String> header : headers.entrySet()) {
+            headerString += header.getKey() + ": " + header.getValue() + "\r\n";
+        }
+        String res = version + " " + status + "\r\n" + headerString;
+
+        if (body != null && !body.isEmpty() && !body.isBlank()) {
+            res += "\r\n" + body;
+        }
+
+        System.out.println("Raw http response:");
+        System.out.println(res);
+        return res;
     }
 }
