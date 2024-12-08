@@ -12,6 +12,7 @@ public class HandlerFactory {
             case "/createDeposit" -> new CreateDepositHandler();
             case "/transfer" -> new TransferHandler();
             case "/withdraw" -> new WithdrawHandler();
+            case "/savings" -> new SavingsHandler();
             default -> new FallbackHandler();
         };
     }
