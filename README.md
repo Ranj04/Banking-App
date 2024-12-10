@@ -29,7 +29,7 @@ Each team member will have their own score.
 -   Clark Batungbakal
 -   Alonzo Manosca
 -   Yuya Hamase
--   Ranj (Insert Last name)
+-   Ranjiv Jithendran
 
 - Feature: Savings Goal Tracker
   - Create savings goal: Allow users to set a new savings goal with details like target amount and deadline.
