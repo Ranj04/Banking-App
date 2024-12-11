@@ -23,7 +23,31 @@ public class CustomParser {
             }
         }
 
-        // todo: complete
+        String body = "";
+        boolean emptyLine = false;
+        for (String line : lines) {
+            if (line.contains(":") && !emptyLine) {
+                String[] headerParts = line.split(":");
+                String key = headerParts[0].trim();
+                String value = headerParts[1].trim();
+                result.setHeaderValue(key, value);
+
+                if (key.equalsIgnoreCase("cookie")) {
+                    String[] cookieParts = value.trim().split(";");
+                    for (String cookiePart : cookieParts) {
+                        String[] cookieStringParts = cookiePart.split("=");
+                        result.setCookieValue(cookieStringParts[0], cookieStringParts[1]);
+                    }
+                }
+            }
+            if (line.equals("")) {
+                emptyLine = true;
+            }
+            if (emptyLine) {
+                body += line;
+            }
+        }
+        result.setBody(body);
         return result;
     }
 }
