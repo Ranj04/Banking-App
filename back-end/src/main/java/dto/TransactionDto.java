@@ -62,10 +62,22 @@ public class TransactionDto extends BaseDto {
     }
 
     public Document toDocument() {
-        return null; // todo complete
+        return new Document()
+                .append("userId", userId)
+                .append("toId", toId)
+                .append("amount", amount)
+                .append("transactionType", transactionType.toString())
+                .append("timestamp", timestamp);
     }
 
     public static TransactionDto fromDocument(Document document) {
-        return null; // todo complete
+        var transaction = new TransactionDto();
+        transaction.loadUniqueId(document);
+        transaction.timestamp = document.getLong("timestamp");
+        transaction.toId = document.getString("toId");
+        transaction.amount = document.getDouble("amount");
+        transaction.transactionType = TransactionType.valueOf(
+                document.getString("transactionType"));
+        return transaction;
     }
 }
