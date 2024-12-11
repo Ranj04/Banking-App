@@ -1,8 +1,13 @@
 package handler;
 
 import dao.SavingsGoalDao;
+import org.bson.Document;
 import request.ParsedRequest;
 import response.HttpResponseBuilder;
+import response.RestApiAppResponse;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class GetSavingsGoalHandler implements BaseHandler {
 
@@ -13,6 +18,14 @@ public class GetSavingsGoalHandler implements BaseHandler {
         if (!authResult.isLoggedIn) {
             return new HttpResponseBuilder().setStatus(StatusCodes.UNAUTHORIZED);
         }
-        return null;
+
+        List<Document> filterList = new ArrayList<>();
+        filterList.add(new Document("userId", authResult.userName));
+        
+
+        var orFilter = new Document("$or", filterList);
+
+        var res = new RestApiAppResponse<>(true, savingsGoalDao.query(orFilter), null);
+        return new HttpResponseBuilder().setStatus("200 OK").setBody(res);
     }
 }
