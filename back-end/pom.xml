@@ -12,7 +12,7 @@
     <maven.compiler.target>21</maven.compiler.target>
     <maven.compiler.source>21</maven.compiler.source>
   </properties>
-  
+
   <dependencies>
     <dependency>
       <groupId>org.testng</groupId>
@@ -25,30 +25,32 @@
       <artifactId>gson</artifactId>
       <version>2.8.6</version>
     </dependency>
+    <!-- Updated MongoDB Driver -->
     <dependency>
       <groupId>org.mongodb</groupId>
-      <artifactId>mongo-java-driver</artifactId>
-      <version>	3.12.11</version>
+      <artifactId>mongodb-driver-sync</artifactId>
+      <version>4.10.2</version>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>1.11</version>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
+    <!-- Mockito for testing -->
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
       <version>4.8.1</version>
       <scope>test</scope>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-assembly-plugin -->
+    <!-- Maven Assembly Plugin -->
     <dependency>
       <groupId>org.apache.maven.plugins</groupId>
       <artifactId>maven-assembly-plugin</artifactId>
       <version>3.4.2</version>
     </dependency>
   </dependencies>
+
 
 
   <build>
