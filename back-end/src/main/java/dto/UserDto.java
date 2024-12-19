@@ -7,6 +7,26 @@ public class UserDto extends BaseDto {
     private String userName;
     private String password;
     private Double balance = 0.0d;
+    private Double debt = 0.0d;
+
+    private Double interest = 1.1;
+
+
+    public void setDebt(Double debt){
+        this.debt = debt;
+    }
+
+    public void setInterest(Double interest){
+        this.interest = interest;
+    }
+
+    public Double getDebt(){
+        return debt;
+    }
+
+    public Double getInterest(){
+        return interest;
+    }
 
     public UserDto() {
         super();
@@ -45,6 +65,8 @@ public class UserDto extends BaseDto {
                 .append("balance", balance)
                 .append("userName", userName)
                 .append("password", password);
+                .append("debt", debt);
+                .append("interest", interest);
         return doc;
     }
 
@@ -56,6 +78,8 @@ public class UserDto extends BaseDto {
         userDto.balance = match.getDouble("balance");
         userDto.setUserName(match.getString("userName"));
         userDto.setPassword(match.getString("password"));
+        userDto.setDebt(match.getDouble("debt"));
+        userDto.setInterest(match.getDouble("interest"));
         return userDto;
     }
 }
