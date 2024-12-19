@@ -40,6 +40,7 @@ Each team member will have their own score.
     -  Team member: Alonzo Manosca
  
       (Screenshots of back/front end)
+    
       ![Screen Shot 2024-12-18 at 11 28 12 PM](https://github.com/user-attachments/assets/6268dbe0-c567-4931-8c3a-364448ed1f5b)
       ![image](https://github.com/user-attachments/assets/32cf7cfe-e630-456a-adb6-61074131a475)
       ![image](https://github.com/user-attachments/assets/0e94f627-e59b-4c71-8d0e-894387d72cfc)
