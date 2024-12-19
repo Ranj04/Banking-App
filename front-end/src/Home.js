@@ -9,6 +9,10 @@ export const Home = () => {
 
     const navigate = useNavigate();
 
+    const goToSavingsGoal = () => {
+        navigate("/savings-goal");
+    };
+
     function handleAmountChange(event) {
         let newAmount = event.target.value;
 
@@ -129,6 +133,7 @@ export const Home = () => {
     return (
         <div>
             <h1>Welcome!</h1>
+            <button onClick={goToSavingsGoal}>Go to Savings Goal</button>
             <div><button onClick={logOut}>Log Out</button></div>
             <div>
                 $<input value={amount} onChange={handleAmountChange} />

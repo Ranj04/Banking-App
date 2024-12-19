@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from "react-router-dom";
 import { Home } from './Home';
+import SavingsGoal from './SavingsGoal'; // Import the SavingsGoal component
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -19,6 +20,10 @@ const router = createBrowserRouter([
   {
     path: "/home",
     element: <Home />,
+  },
+  {
+    path: "/savings-goal", // Add the savings goal path
+    element: <SavingsGoal />, // Render the SavingsGoal component
   },
 ]);
 
