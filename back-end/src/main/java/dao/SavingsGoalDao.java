@@ -28,5 +28,11 @@ public class SavingsGoalDao extends BaseDao<SavingsGoalDto> {
                 .map(SavingsGoalDto::fromDocument)
                 .collect(Collectors.toList());
     }
+    public void updateProgress(String id, double newAmount) {
+        Document filter = new Document("_id", id);
+        Document update = new Document("$set", new Document("currentAmount", newAmount));
+        collection.updateOne(filter, update);
+    }
+
 }
 

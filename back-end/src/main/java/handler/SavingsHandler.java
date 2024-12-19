@@ -17,21 +17,52 @@ public class SavingsHandler implements BaseHandler {
         }
 
         try {
-            // Parse request body into SavingsGoalDto
-            SavingsGoalDto goal = GsonTool.GSON.fromJson(request.getBody(), SavingsGoalDto.class);
-            goal.setUserId(authResult.userName);
+            switch (request.getHttpMethod()) {
+                case "PUT":
+                    return handleUpdateProgress(request, authResult.userName);
+                default:
+                    return new HttpResponseBuilder().setStatus(StatusCodes.METHOD_NOT_ALLOWED);
+            }
+        } catch (Exception e) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.INTERNAL_SERVER_ERROR).setBody(e.getMessage());
+        }
+    }
 
-            // Save the new savings goal to the database
-            SavingsGoalDao savingsGoalDao = SavingsGoalDao.getInstance();
-            savingsGoalDao.put(goal);
+    private HttpResponseBuilder handleUpdateProgress(ParsedRequest request, String userName) {
+        String id = request.getPathParameter("id");
+        if (id == null) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST).setBody("Missing goal ID.");
+        }
 
-            // Return success response
-            RestApiAppResponse<SavingsGoalDto> response = new RestApiAppResponse<>(true, null, "Savings goal created successfully");
+        SavingsGoalDao savingsGoalDao = SavingsGoalDao.getInstance();
+        Document existingGoal = savingsGoalDao.getById(id);
+
+        if (existingGoal == null) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.NOT_FOUND).setBody("Savings goal not found.");
+        }
+
+        if (!existingGoal.getString("userId").equals(userName)) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.FORBIDDEN).setBody("Unauthorized to update this goal.");
+        }
+
+        try {
+            double additionalAmount = GsonTool.GSON.fromJson(request.getBody(), Double.class);
+            double currentAmount = existingGoal.getDouble("currentAmount");
+            double targetAmount = existingGoal.getDouble("targetAmount");
+
+            double newAmount = currentAmount + additionalAmount;
+            if (newAmount > targetAmount) {
+                newAmount = targetAmount; // Cap at target amount
+            }
+
+            savingsGoalDao.updateProgress(id, newAmount);
+
+            RestApiAppResponse response = new RestApiAppResponse("Progress updated successfully.");
+            response.addProperty("newAmount", newAmount);
+
             return new HttpResponseBuilder().setStatus(StatusCodes.OK).setBody(response);
         } catch (Exception e) {
-            return new HttpResponseBuilder()
-                    .setStatus(StatusCodes.SERVER_ERROR)
-                    .setBody(new RestApiAppResponse<>(false, null, e.getMessage()));
+            return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST).setBody("Invalid request body.");
         }
     }
 }
