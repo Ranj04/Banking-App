@@ -80,7 +80,7 @@ const SavingsGoal = () => {
       </label>
       <br />
       <button type="submit">Set Goal</button>
-      <button>Show Current Goals</button>
+      <button onClick={getSavingsGoals}>Show Current Goals</button>
     </form>
   );
 };
