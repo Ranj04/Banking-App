@@ -3,7 +3,9 @@ package dto;
 public enum TransactionType {
     Deposit("Deposit"),
     Transfer("Transfer"),
-    Withdraw("Withdraw");
+    Withdraw("Withdraw"),
+    Financing("Financing"),
+    Repay("Repay");
 
     private final String stringValue;
 

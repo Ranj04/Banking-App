@@ -38,6 +38,21 @@ Each team member will have their own score.
   - Fetch all savings goals: Retrieve a list of all savings goals set by the user.
     -  Endpoint: GET /savings-goals
     -  Team member: Alonzo Manosca
+      
+      ![Screen Shot 2024-12-18 at 11 28 12 PM](https://github.com/user-attachments/assets/6268dbe0-c567-4931-8c3a-364448ed1f5b)
+      ![image](https://github.com/user-attachments/assets/32cf7cfe-e630-456a-adb6-61074131a475)
+      ![image](https://github.com/user-attachments/assets/0e94f627-e59b-4c71-8d0e-894387d72cfc)
+      ![image](https://github.com/user-attachments/assets/2ef43452-fdd5-41ff-8910-109f38368af6)
+      ![image](https://github.com/user-attachments/assets/7e81a593-00d8-4d2d-a7c3-e6b9f3bb60ab)
+      ![image](https://github.com/user-attachments/assets/8fa735a6-deec-4f28-99e7-1c3894a8b58b)
+      ![image](https://github.com/user-attachments/assets/69c202b0-9e0f-49dc-9737-c225214301fc)
+
+
+
+
+
+
+
   - Update savings goal progress: Allow users to update the current amount saved towards a specific goal.
     -  Endpoint: PUT /savings-goals/:id/progress
     -  Team member: Ranj

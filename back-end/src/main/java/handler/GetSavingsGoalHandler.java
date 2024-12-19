@@ -21,7 +21,7 @@ public class GetSavingsGoalHandler implements BaseHandler {
 
         List<Document> filterList = new ArrayList<>();
         filterList.add(new Document("userId", authResult.userName));
-
+        
 
         var orFilter = new Document("$or", filterList);
 

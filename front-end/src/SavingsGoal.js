@@ -8,6 +8,23 @@ const SavingsGoal = () => {
     setGoal({ ...goal, [name]: value });
   };
 
+  function getSavingsGoals() {
+    const httpSetting = {
+        method: 'GET',
+        credentials: 'include',
+    };
+
+    fetch('/getSavings', httpSetting)
+        .then(res => res.json())
+        .then((apiResult) => {
+            console.log(apiResult);
+            setGoal(apiResult.data);
+        })
+        .catch((e) => {
+            console.log(e)
+        })
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const timestamp = new Date(goal.deadline).getTime(); // Convert deadline to numeric timestamp
@@ -63,6 +80,7 @@ const SavingsGoal = () => {
       </label>
       <br />
       <button type="submit">Set Goal</button>
+      <button onClick={getSavingsGoals}>Show Current Goals</button>
     </form>
   );
 };

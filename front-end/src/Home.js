@@ -37,6 +37,30 @@ export const Home = () => {
             });
     }
 
+       function handleFinancing() {
+            console.log(amount);
+            const transactionDto = {
+                amount: amount,
+            };
+            console.log(transactionDto);
+
+            const httpSetting = {
+                method: 'POST',
+                body: JSON.stringify(transactionDto),
+                credentials: 'include',
+            };
+
+            fetch('/financing', httpSetting) // async
+                .then(() => {
+                    getTransactions();
+                    setAmount('');
+                })
+                .catch((e) => {
+                    // server fully broken or down
+                    console.log(e);
+                });
+        }
+
     function handleDeposit() {
         console.log(amount);
         const transactionDto = {
@@ -60,6 +84,30 @@ export const Home = () => {
                 console.log(e);
             });
     }
+
+    function handleRepay() {
+            console.log(amount);
+            const transactionDto = {
+                amount: amount,
+            };
+            console.log(transactionDto);
+
+            const httpSetting = {
+                method: 'POST',
+                body: JSON.stringify(transactionDto),
+                credentials: 'include',
+            };
+
+            fetch('/repay', httpSetting) // async
+                .then(() => {
+                    getTransactions();
+                    setAmount('');
+                })
+                .catch((e) => {
+                    // server fully broken or down
+                    console.log(e);
+                });
+        }
 
     function handleWithdraw() {
         console.log(amount);
@@ -139,6 +187,8 @@ export const Home = () => {
                 $<input value={amount} onChange={handleAmountChange} />
                 <button disabled={amount === ''} onClick={handleDeposit}>Deposit</button>
                 <button disabled={amount === ''} onClick={handleWithdraw}>Withdraw</button>
+                <button disabled={amount === ''} onClick={handleFinancing}>Financing</button>
+                <button disabled={amount === ''} onClick={handleRepay}>Repay</button>
             </div>
             <div>
                 Transfer:
