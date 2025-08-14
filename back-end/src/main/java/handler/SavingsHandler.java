@@ -1,7 +1,6 @@
 package handler;
 
 import dao.SavingsGoalDao;
-import dto.SavingsGoalDto;
 import org.bson.Document;
 import request.ParsedRequest;
 import response.HttpResponseBuilder;
@@ -17,19 +16,17 @@ public class SavingsHandler implements BaseHandler {
         }
 
         try {
-            switch (request.getHttpMethod()) {
-                case "PUT":
-                    return handleUpdateProgress(request, authResult.userName);
-                default:
-                    return new HttpResponseBuilder().setStatus(StatusCodes.METHOD_NOT_ALLOWED);
+            if ("PUT".equalsIgnoreCase(request.getMethod())) {
+                return handleUpdateProgress(request, authResult.userName);
             }
+            return new HttpResponseBuilder().setStatus(StatusCodes.METHOD_NOT_ALLOWED);
         } catch (Exception e) {
             return new HttpResponseBuilder().setStatus(StatusCodes.INTERNAL_SERVER_ERROR).setBody(e.getMessage());
         }
     }
 
     private HttpResponseBuilder handleUpdateProgress(ParsedRequest request, String userName) {
-        String id = request.getPathParameter("id");
+        String id = request.getQueryParam("id");
         if (id == null) {
             return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST).setBody("Missing goal ID.");
         }
@@ -57,7 +54,7 @@ public class SavingsHandler implements BaseHandler {
 
             savingsGoalDao.updateProgress(id, newAmount);
 
-            RestApiAppResponse response = new RestApiAppResponse("Progress updated successfully.");
+            RestApiAppResponse<?> response = new RestApiAppResponse<>("Progress updated successfully.");
             response.addProperty("newAmount", newAmount);
 
             return new HttpResponseBuilder().setStatus(StatusCodes.OK).setBody(response);

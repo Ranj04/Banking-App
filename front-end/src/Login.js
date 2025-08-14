@@ -19,11 +19,14 @@ function Login() {
 
     const httpSetting = {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(userDto),
     };
 
     setMessage('');
-    fetch('/createUser', httpSetting) // async
+    fetch('/createUser', httpSetting)
       .then(res => res.json())
       .then(apiResult => {
         console.log(apiResult);
@@ -32,11 +35,10 @@ function Login() {
           setPassword('');
           setUserName('');
         } else {
-          setMessage(apiResult.message);
+          setMessage(apiResult.message || 'Authentication failed, please try again.');
         }
       })
       .catch(() => {
-        // server fully broken or down
         setMessage('Authentication failed, please try again.');
       });
   }
@@ -52,19 +54,26 @@ function Login() {
 
     const httpSetting = {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(userDto),
     };
 
     setMessage('');
-    fetch('/login', httpSetting) // async
-      .then(res => {
+    fetch('/login', httpSetting)
+      .then(async res => {
         if (res.ok) {
           return navigate('/home');
         }
-        return setMessage('Invalid credentials');
+        let errorMsg = 'Invalid credentials';
+        try {
+          const data = await res.json();
+          if (data && data.message) errorMsg = data.message;
+        } catch (e) {}
+        setMessage(errorMsg);
       })
       .catch(() => {
-        // server fully broken or down
         setMessage('Authentication failed, please try again.');
       });
   }

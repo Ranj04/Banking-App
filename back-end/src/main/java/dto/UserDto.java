@@ -1,9 +1,11 @@
 package dto;
 
 import org.bson.Document;
+import com.google.gson.annotations.SerializedName;
 
 public class UserDto extends BaseDto {
 
+    @SerializedName(value = "userName", alternate = {"username"})
     private String userName;
     private String password;
     private Double balance = 0.0d;
@@ -64,8 +66,8 @@ public class UserDto extends BaseDto {
         var doc = new Document()
                 .append("balance", balance)
                 .append("userName", userName)
-                .append("password", password);
-                .append("debt", debt);
+                .append("password", password)
+                .append("debt", debt)
                 .append("interest", interest);
         return doc;
     }
