@@ -10,8 +10,8 @@ public class LogoutHandler implements BaseHandler {
         boolean isProd = "production".equalsIgnoreCase(System.getenv("APP_ENV"));
         String flags = isProd ? "Path=/; HttpOnly; SameSite=None; Secure" : "Path=/; HttpOnly; SameSite=Lax";
         return new HttpResponseBuilder()
-                .setStatus(handler.StatusCodes.OK)
+                .setStatus(StatusCodes.OK)
                 .setHeader("Set-Cookie", "auth=; Max-Age=0; " + flags)
-                .setBody(new RestApiAppResponse<>(true, "Logged out"));
+                .setBody(new RestApiAppResponse<>("Logged out"));
     }
 }

@@ -11,6 +11,7 @@ import response.HttpResponseBuilder;
 import response.RestApiAppResponse;
 
 import java.time.Instant;
+import java.util.Collections;
 
 class LoginDto {
     String userName;
@@ -23,7 +24,7 @@ public class LoginHandler implements BaseHandler {
     public HttpResponseBuilder handleRequest(ParsedRequest request) {
         LoginDto userDto = GsonTool.GSON.fromJson(request.getBody(), LoginDto.class);
         if (userDto == null || userDto.userName == null || userDto.password == null) {
-            var body = new RestApiAppResponse<BaseDto>(false, "Missing username or password");
+            var body = new RestApiAppResponse<BaseDto>(false, Collections.emptyList(), "Missing username or password");
             return new HttpResponseBuilder().setStatus("400 Bad Request")
                     .setHeader("Content-Type", "application/json")
                     .setBody(body);
@@ -37,7 +38,7 @@ public class LoginHandler implements BaseHandler {
 
         var result = userDao.query(userQuery);
         if (result.isEmpty()) {
-            var body = new RestApiAppResponse<BaseDto>(false, "Invalid credentials");
+            var body = new RestApiAppResponse<BaseDto>(false, Collections.emptyList(), "Invalid credentials");
             return new HttpResponseBuilder().setStatus("401 Unauthorized")
                     .setHeader("Content-Type", "application/json")
                     .setBody(body);
@@ -49,7 +50,7 @@ public class LoginHandler implements BaseHandler {
         authDto.setHash(hash);
         authDao.put(authDto);
 
-        var body = new RestApiAppResponse<BaseDto>(true, "Login successful");
+        var body = new RestApiAppResponse<BaseDto>(true, Collections.emptyList(), "Login successful");
         boolean isProd = "production".equalsIgnoreCase(System.getenv("APP_ENV"));
         String flags = isProd ? "Path=/; HttpOnly; SameSite=None; Secure" : "Path=/; HttpOnly; SameSite=Lax";
         return new HttpResponseBuilder()

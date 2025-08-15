@@ -9,16 +9,33 @@ import org.bson.types.ObjectId;
 import request.ParsedRequest;
 import response.HttpResponseBuilder;
 import response.RestApiAppResponse;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class DeleteGoalHandler implements BaseHandler {
     @Override public HttpResponseBuilder handleRequest(ParsedRequest req) {
         var auth = AuthFilter.doFilter(req);
         if (!auth.isLoggedIn) return new HttpResponseBuilder().setStatus(StatusCodes.UNAUTHORIZED);
 
-        var body = com.google.gson.JsonParser.parseString(req.getBody()).getAsJsonObject();
-        if (!body.has("goalId")) return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST);
+        JsonObject body = null;
+        try { body = JsonParser.parseString(req.getBody()).getAsJsonObject(); } catch (Exception ignored) {}
+        if (body == null || !body.has("goalId")) return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST);
 
-        var id = new ObjectId(body.get("goalId").getAsString());
+        String goalIdStr;
+        var gEl = body.get("goalId");
+        if (gEl.isJsonObject() && gEl.getAsJsonObject().has("$oid")) {
+            goalIdStr = gEl.getAsJsonObject().get("$oid").getAsString();
+        } else {
+            goalIdStr = gEl.getAsString();
+        }
+
+        ObjectId id;
+        try { id = new ObjectId(goalIdStr); }
+        catch (IllegalArgumentException ex) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
+                    .setBody(new RestApiAppResponse<>(false, java.util.Collections.emptyList(), "Invalid goalId format"));
+        }
+
         var dao = GoalDao.getInstance();
         var del = dao.delete(new Document("_id", id).append("userName", auth.userName));
         return new HttpResponseBuilder().setStatus(StatusCodes.OK)

@@ -16,6 +16,7 @@ import java.util.*;
 public class ListGoalHandler implements BaseHandler {
 
     static class GoalView {
+        public String id; // hex string id for the UI
         public GoalDto goal;
         public double progressAmount;
         public double percent;
@@ -39,6 +40,7 @@ public class ListGoalHandler implements BaseHandler {
 
         for (GoalDto g : goals) {
             GoalView v = new GoalView();
+            v.id = (g.id == null) ? null : g.id.toHexString(); // adapted from instruction using existing field name
             v.goal = g;
             if ("savings".equalsIgnoreCase(g.type)) {
                 double sum = g.contributions == null ? 0.0 :
