@@ -3,6 +3,7 @@ import Navbar from "./components/Navbar";
 import { useNavigate } from "react-router-dom";
 
 export const Home = () => {
+    const userName = (typeof window !== 'undefined' && window.localStorage) ? localStorage.getItem('userName') : null;
     const [amount, setAmount] = React.useState('');
     const [transactions, setTransactions] = React.useState([]);
     const [toId, setToId] = React.useState('');
@@ -23,45 +24,32 @@ export const Home = () => {
     }
 
     function getTransactions() {
-        const httpSetting = {
-            method: 'GET',
-            credentials: 'include',
-        };
-
-        fetch('/getTransactions', httpSetting) // async
-            .then(res => res.json()) // parsed json (from login page)
-            .then((apiResult) => {
-                console.log(apiResult);
-                setTransactions(apiResult.data); // how to display on UI
+        const httpSetting = { method: 'GET', credentials: 'include' };
+        fetch('/getTransactions', httpSetting)
+            .then(async (res) => {
+                if(!res.ok) throw new Error(`HTTP ${res.status}`);
+                const apiResult = await res.json().catch(()=>({}));
+                setTransactions(Array.isArray(apiResult?.data) ? apiResult.data : []);
             })
             .catch((e) => {
-                // server fully broken or down
-                console.log(e);
+                console.log('getTransactions failed:', e.message || e);
             });
     }
 
-       function handleFinancing() {
-            console.log(amount);
-            const transactionDto = {
-                amount: amount,
-            };
-            console.log(transactionDto);
 
+       function handleFinancing() {
+            if(!amount) return;
+            const val = Number(amount);
+            if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
             const httpSetting = {
                 method: 'POST',
-                body: JSON.stringify(transactionDto),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userName, amount: val }),
                 credentials: 'include',
             };
-
-            fetch('/financing', httpSetting) // async
-                .then(() => {
-                    getTransactions();
-                    setAmount('');
-                })
-                .catch((e) => {
-                    // server fully broken or down
-                    console.log(e);
-                });
+            fetch('/financing', httpSetting)
+                .then(r=>{ if(!r.ok) throw new Error(); showToast('success','Financing successful'); getTransactions(); setAmount(''); })
+                .catch(()=> showToast('error','Financing failed'));
         }
 
     function showToast(type, text){
@@ -74,49 +62,39 @@ export const Home = () => {
         if(!amount) return;
         const val = Number(amount);
         if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
-        const httpSetting = { method: 'POST', body: JSON.stringify({ amount: val }), credentials: 'include' };
+    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ amount: Number(amount) }), credentials: 'include' };
         fetch('/createDeposit', httpSetting)
             .then(r => { if(!r.ok) throw new Error(); showToast('success','Deposit successful'); getTransactions(); setAmount(''); })
             .catch(()=> showToast('error','Deposit failed'));
     }
 
     function handleRepay() {
-            console.log(amount);
-            const transactionDto = {
-                amount: amount,
-            };
-            console.log(transactionDto);
-
-            const httpSetting = {
-                method: 'POST',
-                body: JSON.stringify(transactionDto),
-                credentials: 'include',
-            };
-
-            fetch('/repay', httpSetting) // async
-                .then(() => {
-                    getTransactions();
-                    setAmount('');
-                })
-                .catch((e) => {
-                    // server fully broken or down
-                    console.log(e);
-                });
-        }
+        if(!amount) return;
+        const val = Number(amount);
+        if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
+        const httpSetting = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userName, amount: val }),
+            credentials: 'include',
+        };
+        fetch('/repay', httpSetting)
+            .then(r=>{ if(!r.ok) throw new Error(); showToast('success','Repay successful'); getTransactions(); setAmount(''); })
+            .catch(()=> showToast('error','Repay failed'));
+    }
 
     function handleWithdraw() {
         if(!amount) return;
         const val = Number(amount);
         if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
-        const httpSetting = { method: 'POST', body: JSON.stringify({ amount: val }), credentials: 'include' };
+    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ userName, amount: val }), credentials: 'include' };
         fetch('/withdraw', httpSetting)
             .then(r => { if(!r.ok) throw new Error(); showToast('success','Withdrawal successful'); getTransactions(); setAmount(''); })
             .catch(()=> showToast('error','Withdrawal failed'));
     }
 
     React.useEffect(() => {
-        // This runs 1 time after the first render
-        getTransactions();
+        getTransactions(); // calls /getTransactions
     }, []);
 
     function logOut() {
@@ -125,38 +103,28 @@ export const Home = () => {
     }
 
     function handleTransfer() {
-        console.log('transfering');
-        console.log(amount);
-        const transactionDto = {
-            amount: amount,
-            toId: toId,
-        };
-        console.log(transactionDto);
-
+        if(!amount || !toId) return;
+        const val = Number(amount);
+        if(isNaN(val) || val <= 0){ setError('Enter a valid amount'); return; }
         const httpSetting = {
             method: 'POST',
-            body: JSON.stringify(transactionDto),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userName, amount: val, toId }),
             credentials: 'include',
         };
-
         setError('');
-        fetch('/transfer', httpSetting) // async
-            .then(res => res.json()) // extracts json result
-            .then((apiResult) => {
-                console.log(apiResult)
-                if (apiResult.status) {
+        fetch('/transfer', httpSetting)
+            .then(res => res.json())
+            .then(apiResult => {
+                if(apiResult.status){
                     getTransactions();
                     setAmount('');
-                    setError('');
-                }else{
-                    setError(apiResult.message); 
+                    setToId('');
+                } else {
+                    setError(apiResult.message || 'Transfer failed');
                 }
             })
-            .catch((e) => {
-                // server fully broken or down
-                console.log(e);
-                setError('Failed to make transfer');
-            });
+            .catch(()=> setError('Transfer failed'));
     }
 
     function formatTimestamp(ts){

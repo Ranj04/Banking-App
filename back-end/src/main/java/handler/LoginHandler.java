@@ -50,9 +50,11 @@ public class LoginHandler implements BaseHandler {
         authDao.put(authDto);
 
         var body = new RestApiAppResponse<BaseDto>(true, null, "Login successful");
+        boolean isProd = "production".equalsIgnoreCase(System.getenv("APP_ENV"));
+        String flags = isProd ? "Path=/; HttpOnly; SameSite=None; Secure" : "Path=/; HttpOnly; SameSite=Lax";
         return new HttpResponseBuilder()
                 .setStatus("200 OK")
-                .setHeader("Set-Cookie", "auth=" + hash + "; Path=/; HttpOnly; SameSite=Lax")
+                .setHeader("Set-Cookie", "auth=" + hash + "; " + flags)
                 .setHeader("Content-Type", "application/json")
                 .setBody(body);
     }

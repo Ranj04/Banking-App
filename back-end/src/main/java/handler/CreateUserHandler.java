@@ -40,10 +40,11 @@ public class CreateUserHandler implements BaseHandler {
         authDto.setHash(hash);
         authDao.put(authDto);
 
+        // Requested static cookie flags
         var resBody = new RestApiAppResponse<>(true, null, "User created and logged in");
         return new HttpResponseBuilder()
                 .setStatus("201 Created")
-                .setHeader("Set-Cookie", "auth=" + hash + "; Path=/; SameSite=None; Secure;")
+                .setHeader("Set-Cookie", "auth=" + hash + "; Path=/; HttpOnly; SameSite=Lax")
                 .setHeader("Content-Type", "application/json")
                 .setBody(resBody);
     }

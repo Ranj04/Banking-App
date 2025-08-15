@@ -16,6 +16,7 @@ public class HandlerFactory {
             case "/getSavings" -> new GetSavingsGoalHandler();
             case "/financing" -> new FinancingHandler();
             case "/repay" -> new RepayHandler();
+            case "/balance" -> new BalanceHandler();
             default -> new FallbackHandler();
         };
     }

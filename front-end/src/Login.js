@@ -15,7 +15,7 @@ export default function Login() {
   const [msg, setMsg] = useState({ type: "", text: "" });
   const navigate = useNavigate();
 
-  async function post(path, payload) {
+  async function post(path, payload, opts = {}) {
     setPending(true);
     setMsg({ type: "", text: "" });
     try {
@@ -23,6 +23,7 @@ export default function Login() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        credentials: opts.credentials || 'same-origin',
       });
       // some endpoints may not return JSON; fall back safely
       const data = await res.json().catch(() => ({}));
@@ -40,7 +41,7 @@ export default function Login() {
       setMsg({ type: "error", text: "Enter a username and password" });
       return;
     }
-    const r = await post("/createUser", { userName, password }); // CRA proxy -> :1299
+  const r = await post("/createUser", { userName, password }, { credentials: 'include' }); // ensure cookie set
     if (r.ok) {
       setMsg({ type: "success", text: r.data?.message || "Account created" });
       setPassword("");
@@ -54,9 +55,11 @@ export default function Login() {
       setMsg({ type: "error", text: "Enter a username and password" });
       return;
     }
-    const r = await post("/login", { userName, password }); // CRA proxy -> :1299
+    const r = await post("/login", { userName, password }, { credentials: 'include' }); // ensure cookies flow
     if (r.ok) {
-      navigate("/home"); // keep your original behavior
+      // remember who is logged in for later use
+      try { localStorage.setItem('userName', userName); } catch {}
+      navigate("/home");
     } else {
       setMsg({ type: "error", text: r.data?.message || "Invalid credentials" });
     }
