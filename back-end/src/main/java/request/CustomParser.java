@@ -37,10 +37,10 @@ public class CustomParser {
                     for (String cookiePart : cookieParts) {
                         String part = cookiePart.trim();
                         if (part.isEmpty()) continue;
-                        String[] kv = part.split("=", 2);
+                        String[] kv = part.split("=", 2); // split on first '='
                         String cKey = kv[0].trim();
                         String cVal = kv.length > 1 ? kv[1] : "";
-                        result.setCookieValue(cKey, cVal);
+                        result.setCookieValue(cKey, cVal); // stores "auth", not " auth"
                     }
                 }
             }

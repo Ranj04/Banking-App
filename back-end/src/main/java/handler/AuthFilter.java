@@ -15,17 +15,14 @@ public class AuthFilter {
         AuthDao authDao = AuthDao.getInstance();
         var result = new AuthResult();
 
-        // Robust auth hash extraction (provided snippet)
+        // Replaced auth cookie extraction with user-provided snippet
         String authHash = parsedRequest.getCookieValue("auth");
         if (authHash == null || authHash.isBlank()) {
             String cookieHeader = parsedRequest.getHeaderValue("Cookie");
             if (cookieHeader != null) {
                 for (String part : cookieHeader.split(";")) {
                     String[] kv = part.trim().split("=", 2);
-                    if (kv.length == 2 && kv[0].trim().equals("auth")) {
-                        authHash = kv[1];
-                        break;
-                    }
+                    if (kv.length == 2 && kv[0].trim().equals("auth")) { authHash = kv[1]; break; }
                 }
             }
         }
@@ -34,16 +31,8 @@ public class AuthFilter {
             return result;
         }
 
-        // Debug logging (updated to reflect new parsing logic)
-        System.out.println("[Auth] Final authHash = " + authHash);
-
         Document filter = new Document("hash", authHash);
         var authRes = authDao.query(filter);
-        System.out.println("[Auth] matching records = " + authRes.size());
-        long nowSec = java.time.Instant.now().getEpochSecond();
-        long exp = authRes.isEmpty() ? -1L : authRes.get(0).getExpireTime();
-        System.out.println("[Auth] nowSec=" + nowSec + " expireTime=" + exp + " expired=" + (exp != -1 && nowSec > exp));
-
         if (authRes.size() == 0) {
             result.isLoggedIn = false;
             return result;

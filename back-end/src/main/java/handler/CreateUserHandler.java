@@ -25,8 +25,8 @@ public class CreateUserHandler implements BaseHandler {
         var query = new Document("userName", userDto.getUserName());
         var resultQ = userDao.query(query);
         if (!resultQ.isEmpty()) {
-            var resBody = new RestApiAppResponse<>(false, null, "Username already taken");
-            return new HttpResponseBuilder().setStatus("409 Conflict").setBody(resBody);
+            return new HttpResponseBuilder().setStatus("409 Conflict")
+                    .setBody(new RestApiAppResponse<>(false, null, "Username already taken"));
         }
         userDto.setPassword(DigestUtils.sha256Hex(userDto.getPassword()));
         userDao.put(userDto);
@@ -40,12 +40,11 @@ public class CreateUserHandler implements BaseHandler {
         authDto.setHash(hash);
         authDao.put(authDto);
 
-        // Requested static cookie flags
-        var resBody = new RestApiAppResponse<>(true, null, "User created and logged in");
+        // Inline response object per request
         return new HttpResponseBuilder()
                 .setStatus("201 Created")
                 .setHeader("Set-Cookie", "auth=" + hash + "; Path=/; HttpOnly; SameSite=Lax")
                 .setHeader("Content-Type", "application/json")
-                .setBody(resBody);
+                .setBody(new RestApiAppResponse<>(true, null, "User created and logged in"));
     }
 }
