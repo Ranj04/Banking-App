@@ -23,7 +23,7 @@ export default function Login() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        credentials: opts.credentials || 'same-origin',
+        credentials: opts.credentials || 'include', // default include so auth cookie always sent
       });
       // some endpoints may not return JSON; fall back safely
       const data = await res.json().catch(() => ({}));
@@ -41,8 +41,9 @@ export default function Login() {
       setMsg({ type: "error", text: "Enter a username and password" });
       return;
     }
-  const r = await post("/createUser", { userName, password }, { credentials: 'include' }); // ensure cookie set
+  const r = await post("/createUser", { userName, password }); // credentials included by default
     if (r.ok) {
+      try { localStorage.setItem('userName', userName); } catch {}
       setMsg({ type: "success", text: r.data?.message || "Account created" });
       setPassword("");
     } else {
@@ -55,7 +56,7 @@ export default function Login() {
       setMsg({ type: "error", text: "Enter a username and password" });
       return;
     }
-    const r = await post("/login", { userName, password }, { credentials: 'include' }); // ensure cookies flow
+  const r = await post("/login", { userName, password }); // credentials included by default
     if (r.ok) {
       // remember who is logged in for later use
       try { localStorage.setItem('userName', userName); } catch {}

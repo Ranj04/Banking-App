@@ -145,24 +145,14 @@
 /* Optional: give section cards a touch more breathing room */
 .grid-2 .card h2{ margin: 0 0 12px; }
 :root{
-  /* Updated palette for a more vibrant blue-grey feel */
-  --bg:#0d2234;          /* deeper base */
-  --bg2:#18354d;         /* mid tone */
-  --bg3:#244b68;         /* added accent for gradient */
-  --card:#0f2535;        /* lifted card shade to match new background */
-  --text:#e6edf3;
-  --muted:#94a6b4;
+  --bg:#0d2234; --bg2:#18354d; --bg3:#244b68; --card:#0f2535; --text:#e6edf3; --muted:#94a6b4;
   --primary:#3b82f6;--primary-600:#2563eb;--ring:#93c5fd;--success:#10b981;--danger:#ef4444;
+  --bg-start:#0f2740; --bg-mid:#0a1e2f; --bg-end:#071826;
 }
 *{box-sizing:border-box}
 html,body,#root{height:100%}
 body{
   margin:0; color:var(--text);
-  /* Layered gradients for subtle vibrancy */
-  background:
-    radial-gradient(1200px 800px at 25% 5%, var(--bg3), var(--bg2) 55%, var(--bg) 100%),
-    linear-gradient(160deg, #1a3954, #0d2234);
-  background-blend-mode:overlay,normal;
   font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica Neue,Arial,Noto Sans;
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
@@ -233,3 +223,8 @@ td{ padding:10px; }
 .savings-goal-form {
   margin:20px auto; padding:10px; border:1px solid #ccc; width:300px;
 }
+
+/* Global background gradient & transparency overrides */
+html, body, #root { height:100%; }
+body { background: radial-gradient(1200px 600px at 50% 0, var(--bg-start), var(--bg-mid) 40%, var(--bg-end) 100%) fixed; }
+#root, .App, .app-shell, .page-wrap, .dashboard-grid { background: transparent !important; }

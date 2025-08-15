@@ -1,0 +1,35 @@
+/* Centers the whole dashboard regardless of parent padding */
+.home-container {
+  width: min(1120px, 100% - 48px);   /* 24px side gutters */
+  margin-inline: auto;               /* hard center */
+  padding-block: 32px 64px;
+}
+
+/* 2-column grid on desktop */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+/* Cards fill their cells */
+.cards-grid > .card {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+/* Recent Activity spans full width below row 1 */
+.recent-activity { grid-column: 1 / -1; }
+
+/* Let the table expand without inner scrollbars (retain previous utility) */
+.recent-activity .table-wrapper { overflow: visible; }
+.recent-activity table { width: 100%; table-layout: auto; }
+
+/* Stack to one column on smaller screens */
+@media (max-width: 1024px) {
+  .cards-grid { grid-template-columns: 1fr; }
+  .recent-activity { grid-column: 1 / 2; }
+}

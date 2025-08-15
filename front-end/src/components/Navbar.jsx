@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 /**
@@ -6,12 +6,27 @@ import { NavLink, useNavigate } from "react-router-dom";
  * - Uses the CSS you already added (.navbar, .brand, .button.ghost).
  * - Call <Navbar /> at the top of pages like Home.
  */
+function possessive(name) {
+  if (!name) return null;
+  const trimmed = name.trim();
+  const endsWithS = /s$/i.test(trimmed);
+  return `${trimmed}${endsWithS ? "'" : "'s"}`;
+}
+
 export default function Navbar({ onLogout }) {
   const navigate = useNavigate();
+  const [userName, setUserName] = useState("");
 
-  function handleLogout() {
+  useEffect(() => {
+    try { setUserName(localStorage.getItem('userName') || ''); } catch {}
+  }, []);
+
+  async function handleLogout() {
     if (typeof onLogout === "function") onLogout();
-    // If you have a backend logout, call it here via fetch('/logout', {method:'POST'})
+    try {
+      await fetch('/logout', { method: 'POST', credentials: 'include' });
+    } catch {}
+    try { localStorage.removeItem('userName'); } catch {}
     navigate("/"); // back to login
   }
 
@@ -20,7 +35,7 @@ export default function Navbar({ onLogout }) {
 
   return (
     <header className="navbar">
-      <div className="brand">Banking App</div>
+      <div className="brand">{userName ? `${possessive(userName)} Banking App` : 'Banking App'}</div>
 
       <nav style={{ display: "flex", gap: 14, marginLeft: 12 }}>
         <NavLink

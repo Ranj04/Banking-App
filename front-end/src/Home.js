@@ -1,6 +1,7 @@
 import React from "react";
 import Navbar from "./components/Navbar";
 import { useNavigate } from "react-router-dom";
+import './Home.css';
 
 export const Home = () => {
     const userName = (typeof window !== 'undefined' && window.localStorage) ? localStorage.getItem('userName') : null;
@@ -23,17 +24,20 @@ export const Home = () => {
         setAmount(newAmount);
     }
 
+    async function apiFetch(url, opts={}){
+        const res = await fetch(url, { credentials:'include', ...opts });
+        if(res.status === 401){ navigate('/'); throw new Error('Unauthorized'); }
+        return res;
+    }
+
     function getTransactions() {
-        const httpSetting = { method: 'GET', credentials: 'include' };
-        fetch('/getTransactions', httpSetting)
-            .then(async (res) => {
+        apiFetch('/getTransactions')
+            .then(async res => {
                 if(!res.ok) throw new Error(`HTTP ${res.status}`);
                 const apiResult = await res.json().catch(()=>({}));
                 setTransactions(Array.isArray(apiResult?.data) ? apiResult.data : []);
             })
-            .catch((e) => {
-                console.log('getTransactions failed:', e.message || e);
-            });
+            .catch(e => console.log('getTransactions failed:', e.message || e));
     }
 
 
@@ -44,10 +48,9 @@ export const Home = () => {
             const httpSetting = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userName, amount: val }),
-                credentials: 'include',
+                body: JSON.stringify({ amount: val }),
             };
-            fetch('/financing', httpSetting)
+            apiFetch('/financing', httpSetting)
                 .then(r=>{ if(!r.ok) throw new Error(); showToast('success','Financing successful'); getTransactions(); setAmount(''); })
                 .catch(()=> showToast('error','Financing failed'));
         }
@@ -62,8 +65,8 @@ export const Home = () => {
         if(!amount) return;
         const val = Number(amount);
         if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
-    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ amount: Number(amount) }), credentials: 'include' };
-        fetch('/createDeposit', httpSetting)
+    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ amount: Number(amount) }) };
+        apiFetch('/createDeposit', httpSetting)
             .then(r => { if(!r.ok) throw new Error(); showToast('success','Deposit successful'); getTransactions(); setAmount(''); })
             .catch(()=> showToast('error','Deposit failed'));
     }
@@ -75,10 +78,9 @@ export const Home = () => {
         const httpSetting = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userName, amount: val }),
-            credentials: 'include',
+            body: JSON.stringify({ amount: val }),
         };
-        fetch('/repay', httpSetting)
+        apiFetch('/repay', httpSetting)
             .then(r=>{ if(!r.ok) throw new Error(); showToast('success','Repay successful'); getTransactions(); setAmount(''); })
             .catch(()=> showToast('error','Repay failed'));
     }
@@ -87,8 +89,8 @@ export const Home = () => {
         if(!amount) return;
         const val = Number(amount);
         if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
-    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ userName, amount: val }), credentials: 'include' };
-        fetch('/withdraw', httpSetting)
+    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ amount: val }) };
+        apiFetch('/withdraw', httpSetting)
             .then(r => { if(!r.ok) throw new Error(); showToast('success','Withdrawal successful'); getTransactions(); setAmount(''); })
             .catch(()=> showToast('error','Withdrawal failed'));
     }
@@ -109,11 +111,10 @@ export const Home = () => {
         const httpSetting = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userName, amount: val, toId }),
-            credentials: 'include',
+            body: JSON.stringify({ amount: val, toId }),
         };
         setError('');
-        fetch('/transfer', httpSetting)
+        apiFetch('/transfer', httpSetting)
             .then(res => res.json())
             .then(apiResult => {
                 if(apiResult.status){
@@ -152,84 +153,86 @@ export const Home = () => {
             return (
                 <>
                     <Navbar />
-                    <main className="page">
-                        <section className="grid-3">
-                            {/* Card A — Quick actions */}
-                            <div className="card">
-                                <div className="row" style={{justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:8}}>
-                                    <h1>Welcome!</h1>
-                                    <span className="balance-badge">{balanceFormatted || '$0.00'}</span>
-                                </div>
-                                <div className="divider" />
-                                <h2 className="section-title">Quick actions</h2>
-                                <div className="input-group" style={{marginBottom:10}}>
-                                    <span className="prefix">$</span>
-                                    <input
-                                        className="input"
-                                        value={amount}
-                                        onChange={handleAmountChange}
-                                        inputMode="decimal"
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                                <div className="toolbar" style={{marginTop:6}}>
-                                    <button className="button" onClick={deposit} disabled={!amount}>Deposit</button>
-                                    <button className="button ghost" onClick={withdraw} disabled={!amount}>Withdraw</button>
-                                    <button className="button ghost" disabled>Financing</button>
-                                    <button className="button ghost" disabled>Repay</button>
-                                </div>
-                                {toast && (
-                                    <div className={`alert ${toast.type === 'error' ? 'error' : 'success'}`} style={{marginTop:8}}>
-                                        {toast.text}
+                    <main className="home-container">{/* renamed structural wrapper */}
+                        <div className="page-wrap">
+                            <div className="cards-grid">{/* renamed from dashboard-grid */}
+                                {/* Card A — Welcome / Quick actions */}
+                                <div className="card welcome-card">
+                                    <div className="row" style={{justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:8}}>
+                                        <h1>Welcome!</h1>
+                                        <span className="balance-badge">{balanceFormatted || '$0.00'}</span>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Card B — Transfer */}
-                            <div className="card">
-                                <h2 className="section-title">Transfer</h2>
-                                <div className="stack" style={{gap:10}}>
-                                    <input className="input" placeholder="From account" disabled />
-                                    <input className="input" placeholder="To account" disabled />
-                                    <button className="button ghost" disabled>Transfer</button>
-                                    <p className="helper">Transfer is coming soon.</p>
+                                    <div className="divider" />
+                                    <h2 className="section-title">Quick actions</h2>
+                                    <div className="input-group" style={{marginBottom:10}}>
+                                        <span className="prefix">$</span>
+                                        <input
+                                            className="input"
+                                            value={amount}
+                                            onChange={handleAmountChange}
+                                            inputMode="decimal"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                    <div className="toolbar" style={{marginTop:6}}>
+                                        <button className="button" onClick={deposit} disabled={!amount}>Deposit</button>
+                                        <button className="button ghost" onClick={withdraw} disabled={!amount}>Withdraw</button>
+                                        <button className="button ghost" disabled>Financing</button>
+                                        <button className="button ghost" disabled>Repay</button>
+                                    </div>
+                                    {toast && (
+                                        <div className={`alert ${toast.type === 'error' ? 'error' : 'success'}`} style={{marginTop:8}}>
+                                            {toast.text}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
 
-                            {/* Card C — Recent activity */}
-                            <div className="card">
-                                <h2 className="section-title">Recent activity</h2>
-                                <div className="table-container" style={{marginTop:8}}>
-                                    <table className="table">
-                                        <thead>
-                                            <tr>
-                                                <th>Amount</th><th>Type</th><th>Time</th><th>From</th><th>To</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {Array.isArray(transactions) && transactions.length > 0 ? (
-                                                transactions.map((t,i)=>(
-                                                    <tr key={i}>
-                                                        <td>${Number(t.amount).toFixed(2)}</td>
-                                                        <td><span className="tag">{t.transactionType}</span></td>
-                                                        <td>{formatTimestamp(t.timestamp)}</td>
-                                                        <td>{t.fromId}</td>
-                                                        <td>{t.toId}</td>
-                                                    </tr>
-                                                ))
-                                            ) : (
+                                {/* Card B — Transfer */}
+                                <div className="card transfer-card">
+                                    <h2 className="section-title">Transfer</h2>
+                                    <div className="stack" style={{gap:10}}>
+                                        <input className="input" placeholder="From account" disabled />
+                                        <input className="input" placeholder="To account" disabled />
+                                        <button className="button ghost" disabled>Transfer</button>
+                                        <p className="helper">Transfer is coming soon.</p>
+                                    </div>
+                                </div>
+
+                                {/* Card C — Recent activity */}
+                                <div className="card recent-activity">
+                                    <h2 className="section-title">Recent activity</h2>
+                                    <div className="table-wrapper" style={{marginTop:8}}>
+                                        <table className="table">
+                                            <thead>
                                                 <tr>
-                                                    <td colSpan="5" style={{ textAlign:'center', color:'var(--muted)' }}>
-                                                        No transactions yet
-                                                    </td>
+                                                    <th>Amount</th><th>Type</th><th>Time</th><th>From</th><th>To</th>
                                                 </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {Array.isArray(transactions) && transactions.length > 0 ? (
+                                                    transactions.map((t,i)=>(
+                                                        <tr key={i}>
+                                                            <td>${Number(t.amount).toFixed(2)}</td>
+                                                            <td><span className="tag">{t.transactionType}</span></td>
+                                                            <td>{formatTimestamp(t.timestamp)}</td>
+                                                            <td>{t.fromId}</td>
+                                                            <td>{t.toId}</td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan="5" style={{ textAlign:'center', color:'var(--muted)' }}>
+                                                            No transactions yet
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {error && <div className="alert error" style={{marginTop:8}}>{error}</div>}
                                 </div>
-                                {error && <div className="alert error" style={{marginTop:8}}>{error}</div>}
                             </div>
-                        </section>
+                        </div>
                     </main>
                 </>
             );
