@@ -1,0 +1,236 @@
+/* Use same centered container + grid conventions as Home */
+.home-container.goals-page {
+  width: min(1120px, 100% - 48px);
+  margin-inline: auto;
+  padding-block: 32px 64px;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.recent-activity { grid-column: 1 / -1; } /* full width row, like Home */
+
+@media (max-width: 1024px) {
+  .cards-grid { grid-template-columns: 1fr; }
+  .recent-activity { grid-column: 1 / 2; }
+}
+
+/* Card chrome (use your existing .card colors/shadows; this just sizes) */
+.card { border-radius: 16px; padding: 20px; }
+.card__header h2 { margin: 0; }
+.card__header .subtle { opacity: 0.75; font-size: 0.9rem; }
+
+/* Page top-right actions */
+.page-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+/* Form grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > span { opacity: 0.85; font-size: 0.9rem; }
+.field select,
+.field input {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e9f0f6;
+  padding: 10px 12px;
+  border-radius: 10px;
+  outline: none;
+}
+.form-actions { margin-top: 8px; grid-column: 1 / -1; }
+
+/* Buttons consistent with your dark theme */
+.btn {
+  border-radius: 10px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: rgba(255,255,255,0.06);
+  color: #e9f0f6;
+  transition: transform 0.05s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.btn:hover { transform: translateY(-1px); background: rgba(255,255,255,0.08); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary { background: rgba(56,189,248,0.15); border-color: rgba(56,189,248,0.35); }
+.btn-primary:hover { background: rgba(56,189,248,0.25); }
+.btn-ghost   { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+.btn-danger  { background: rgba(244,63,94,0.15); border-color: rgba(244,63,94,0.35); }
+.btn-danger:hover { background: rgba(244,63,94,0.25); }
+
+/* Inputs inside action rows */
+.input.small {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e9f0f6;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+/* Chips */
+.chip {
+  display: inline-block;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+}
+.chip--green { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.35); }
+.chip--blue  { background: rgba(56,189,248,0.15); border-color: rgba(56,189,248,0.35); }
+
+/* Progress bar */
+.progress {
+  height: 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.progress__bar {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(56,189,248,.9), rgba(16,185,129,.9));
+}
+
+/* Goal cards list */
+.goals-list .goals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+.goal-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 14px;
+}
+.goal-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.goal-card__title { font-weight: 600; }
+.goal-card__stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 6px 0;
+  font-size: 0.95rem;
+}
+.goal-card__percent { opacity: 0.9; min-width: 38px; text-align: right; }
+.goal-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.empty, .muted, .subtle { opacity: 0.75; }
+
+/* Make create + summary cards equal height */
+.goals-card, .summary-card {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Center cards within grid */
+.cards-grid {
+  justify-items: center;
+}
+
+/* Constrain inner card widths uniformly */
+.goals-card, .summary-card, .goals-list { width: 100%; max-width: 720px; }
+/* Center summary card by spanning full grid */
+.summary-card { grid-column: 1 / -1; margin-inline: auto; }
+
+/* Ensure full-width section still centered */
+.goals-list.recent-activity { justify-self: center; }
+
+/* Enhanced select styling for visibility */
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  padding-right: 40px; /* space for arrow */
+  position: relative;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23b6d5ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 6l4 4 4-4'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+.field select:hover {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.28);
+}
+.field select:focus {
+  outline: none;
+  border-color: rgba(56,189,248,0.65);
+  box-shadow: 0 0 0 2px rgba(56,189,248,0.35);
+}
+.field select option { color: #0f1822; }
+.field select option:disabled { color: #7a8694; }
+
+/* Place create + summary side-by-side on row 1 */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+/* The goals list is full width on row 2 (you already have this) */
+.recent-activity { grid-column: 1 / -1; }
+
+/* Summary card visuals */
+.summary-card .summary-stats { margin-top: 8px; }
+
+.summary-card .summary-row {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin: 4px 0 10px;
+}
+
+.stat { min-width: 140px; }
+.stat__label { opacity: 0.8; font-size: 0.9rem; }
+.stat__value { font-weight: 700; font-size: 1.05rem; }
+
+/* Reuse the existing progress style */
+.small { font-size: 0.9rem; }
+
+/* Responsive: stack to 1 column on smaller screens */
+@media (max-width: 1024px) {
+  .cards-grid { grid-template-columns: 1fr; }
+  .recent-activity { grid-column: 1 / 2; }
+}
+
+/* Center the Create a goal card */
+.goals-card {
+  grid-column: 1 / -1;            /* span both columns */
+  max-width: 640px;               /* reasonable readable width */
+  margin-inline: auto;            /* center horizontally */
+  width: 100%;
+}

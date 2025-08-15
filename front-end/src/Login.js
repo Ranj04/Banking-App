@@ -58,9 +58,9 @@ export default function Login() {
     }
   const r = await post("/login", { userName, password }); // credentials included by default
     if (r.ok) {
-      // remember who is logged in for later use
+      // remember who is logged in for later use then hard redirect
       try { localStorage.setItem('userName', userName); } catch {}
-      navigate("/home");
+      window.location.href = '/home';
     } else {
       setMsg({ type: "error", text: r.data?.message || "Invalid credentials" });
     }

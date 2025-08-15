@@ -9,6 +9,8 @@ import {
 } from "react-router-dom";
 import { Home } from './Home';
 import SavingsGoal from './SavingsGoal'; // Import the SavingsGoal component
+import Goals from './pages/Goals'; // Goals page
+import ProtectedRoute from './ProtectedRoute';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -19,11 +21,15 @@ const router = createBrowserRouter([
   },
   {
     path: "/home",
-    element: <Home />,
+  element: <ProtectedRoute><Home /></ProtectedRoute>,
   },
   {
     path: "/savings-goal", // Add the savings goal path
-    element: <SavingsGoal />, // Render the SavingsGoal component
+  element: <ProtectedRoute><SavingsGoal /></ProtectedRoute>, // Render the SavingsGoal component
+  },
+  {
+    path: "/goals", // Goals tracking page
+  element: <ProtectedRoute><Goals /></ProtectedRoute>,
   },
 ]);
 

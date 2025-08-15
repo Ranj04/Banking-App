@@ -205,7 +205,7 @@ export const Home = () => {
                                         <table className="table">
                                             <thead>
                                                 <tr>
-                                                    <th>Amount</th><th>Type</th><th>Time</th><th>From</th><th>To</th>
+                                                    <th>Amount</th><th>Type</th><th>Time</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -215,13 +215,11 @@ export const Home = () => {
                                                             <td>${Number(t.amount).toFixed(2)}</td>
                                                             <td><span className="tag">{t.transactionType}</span></td>
                                                             <td>{formatTimestamp(t.timestamp)}</td>
-                                                            <td>{t.fromId}</td>
-                                                            <td>{t.toId}</td>
                                                         </tr>
                                                     ))
                                                 ) : (
                                                     <tr>
-                                                        <td colSpan="5" style={{ textAlign:'center', color:'var(--muted)' }}>
+                                                        <td colSpan="3" style={{ textAlign:'center', color:'var(--muted)' }}>
                                                             No transactions yet
                                                         </td>
                                                     </tr>
