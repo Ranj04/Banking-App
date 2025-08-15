@@ -19,14 +19,14 @@ public class CreateUserHandler implements BaseHandler {
         UserDto userDto = GsonTool.GSON.fromJson(request.getBody(), dto.UserDto.class);
         if (userDto == null || userDto.getUserName() == null || userDto.getPassword() == null) {
             return new HttpResponseBuilder().setStatus("400 Bad Request")
-                    .setBody(new RestApiAppResponse<>(false, null, "Missing username or password"));
+                    .setBody(new RestApiAppResponse<>(false, "Missing username or password"));
         }
         UserDao userDao = UserDao.getInstance();
         var query = new Document("userName", userDto.getUserName());
         var resultQ = userDao.query(query);
         if (!resultQ.isEmpty()) {
             return new HttpResponseBuilder().setStatus("409 Conflict")
-                    .setBody(new RestApiAppResponse<>(false, null, "Username already taken"));
+                    .setBody(new RestApiAppResponse<>(false, "Username already taken"));
         }
         userDto.setPassword(DigestUtils.sha256Hex(userDto.getPassword()));
         userDao.put(userDto);
@@ -45,6 +45,6 @@ public class CreateUserHandler implements BaseHandler {
                 .setStatus("201 Created")
                 .setHeader("Set-Cookie", "auth=" + hash + "; Path=/; HttpOnly; SameSite=Lax")
                 .setHeader("Content-Type", "application/json")
-                .setBody(new RestApiAppResponse<>(true, null, "User created and logged in"));
+                .setBody(new RestApiAppResponse<>(true, "User created and logged in"));
     }
 }

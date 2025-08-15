@@ -32,7 +32,7 @@ public class TransferHandler implements BaseHandler {
                 .iterator().next();
 
         if (fromUser == null) {
-            var res = new RestApiAppResponse<>(false, null, "Invalid from user.");
+            var res = new RestApiAppResponse<>(false, "Invalid from user.");
             return new HttpResponseBuilder().setStatus("400 Bad Request")
                     .setBody(GsonTool.GSON.toJson(res));
         }
@@ -41,13 +41,13 @@ public class TransferHandler implements BaseHandler {
                 .iterator().next();
 
         if (toUser == null) {
-            var res = new RestApiAppResponse<>(false, null, "Invalid user to transfer.");
+            var res = new RestApiAppResponse<>(false, "Invalid user to transfer.");
             return new HttpResponseBuilder().setStatus("400 Bad Request")
                     .setBody(GsonTool.GSON.toJson(res));
         }
 
         if (fromUser.getBalance() < transferRequestDto.amount) {
-            var res = new RestApiAppResponse<>(false, null, "Not enough funds.");
+            var res = new RestApiAppResponse<>(false, "Not enough funds.");
             return new HttpResponseBuilder().setStatus("400 Bad Request")
                     .setBody(GsonTool.GSON.toJson(res));
         }

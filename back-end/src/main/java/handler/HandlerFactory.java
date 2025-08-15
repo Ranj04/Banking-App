@@ -8,6 +8,7 @@ public class HandlerFactory {
         return switch (request.getPath()) {
             case "/createUser" -> new CreateUserHandler();
             case "/login" -> new LoginHandler();
+            case "/logout" -> new LogoutHandler();
             case "/getTransactions" -> new GetTransactionsHandler();
             case "/createDeposit" -> new CreateDepositHandler();
             case "/transfer" -> new TransferHandler();
@@ -17,6 +18,12 @@ public class HandlerFactory {
             case "/financing" -> new FinancingHandler();
             case "/repay" -> new RepayHandler();
             case "/balance" -> new BalanceHandler();
+            // Newly added goal & spend routes
+            case "/goals/create" -> new handler.goals.CreateGoalHandler();
+            case "/goals/list" -> new handler.goals.ListGoalHandler();
+            case "/goals/contribute" -> new handler.goals.ContributeGoalHandler();
+            case "/goals/delete" -> new handler.goals.DeleteGoalHandler();
+            case "/spend/log" -> new handler.spend.LogSpendHandler();
             default -> new FallbackHandler();
         };
     }

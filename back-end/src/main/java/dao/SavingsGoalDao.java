@@ -22,6 +22,7 @@ public class SavingsGoalDao extends BaseDao<SavingsGoalDto> {
         return instance;
     }
 
+    @Override
     public List<SavingsGoalDto> query(Document filter) {
         return collection.find(filter)
                 .into(new ArrayList<>())

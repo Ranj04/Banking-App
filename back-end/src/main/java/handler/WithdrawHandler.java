@@ -29,7 +29,7 @@ public class WithdrawHandler implements BaseHandler {
         UserDto user = userDao.query(new Document("userName", authResult.userName)).get(0);
 
         if (user.getBalance() < transactionDto.getAmount()) {
-            var res = new RestApiAppResponse<>(false, null, "Not enough funds.");
+            var res = new RestApiAppResponse<>(false, "Not enough funds.");
             return new HttpResponseBuilder().setStatus("400 Bad Request")
                     .setBody(GsonTool.GSON.toJson(res));
         }
