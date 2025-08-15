@@ -1,11 +1,11 @@
-# Banking Application - Spending and Savings Goal Tracker
+## Banking Application - Spending and Savings Goal Tracker
 
-Banking App
+# Banking App
 
 A full-stack demo banking app with a custom Java HTTP server + MongoDB backend and a React frontend.
 Features include authentication via signed cookie, deposits/withdrawals, transaction history, and Goals (savings targets & spending limits).
 
-Tech Stack
+# Tech Stack
 
 Frontend: React (CRA), fetch API, cookie auth (credentials: 'include')
 
@@ -64,7 +64,7 @@ back-end/
       GoalDto.java
       SpendDto.java
 
-Quick Start (Dev)
+# Quick Start (Dev)
 
 Windows PowerShell sometimes blocks npm scripts; quick fix below.
 
