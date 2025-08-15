@@ -33,10 +33,14 @@ public class CustomParser {
                 result.setHeaderValue(key, value);
 
                 if (key.equalsIgnoreCase("cookie")) {
-                    String[] cookieParts = value.trim().split(";");
+                    String[] cookieParts = value.split(";");
                     for (String cookiePart : cookieParts) {
-                        String[] cookieStringParts = cookiePart.split("=");
-                        result.setCookieValue(cookieStringParts[0], cookieStringParts[1]);
+                        String part = cookiePart.trim();
+                        if (part.isEmpty()) continue;
+                        String[] kv = part.split("=", 2);
+                        String cKey = kv[0].trim();
+                        String cVal = kv.length > 1 ? kv[1] : "";
+                        result.setCookieValue(cKey, cVal);
                     }
                 }
             }

@@ -15,29 +15,35 @@ public class AuthFilter {
         AuthDao authDao = AuthDao.getInstance();
         var result = new AuthResult();
 
-        // --- Temporary debug logging start ---
-        String cookieHeader = parsedRequest.getHeaderValue("Cookie");
-        System.out.println("[Auth] Cookie header = " + cookieHeader);
-        String authHash = null;
-        if (cookieHeader != null) {
-            for (String part : cookieHeader.split(";")) {
-                String[] kv = part.trim().split("=", 2);
-                if (kv.length == 2 && kv[0].equals("auth")) { authHash = kv[1]; break; }
+        // Robust auth hash extraction (provided snippet)
+        String authHash = parsedRequest.getCookieValue("auth");
+        if (authHash == null || authHash.isBlank()) {
+            String cookieHeader = parsedRequest.getHeaderValue("Cookie");
+            if (cookieHeader != null) {
+                for (String part : cookieHeader.split(";")) {
+                    String[] kv = part.trim().split("=", 2);
+                    if (kv.length == 2 && kv[0].trim().equals("auth")) {
+                        authHash = kv[1];
+                        break;
+                    }
+                }
             }
         }
-        System.out.println("[Auth] Parsed auth = " + authHash);
-        var records = authDao.query(new Document("hash", authHash));
-        System.out.println("[Auth] matching records = " + records.size());
-        long nowSec = java.time.Instant.now().getEpochSecond();
-        long exp = records.isEmpty() ? -1L : records.get(0).getExpireTime();
-        System.out.println("[Auth] nowSec=" + nowSec + " expireTime=" + exp + " expired=" + (exp != -1 && nowSec > exp));
-        // --- Temporary debug logging end ---
-
-        if (authHash == null) {
+        if (authHash == null || authHash.isBlank()) {
+            result.isLoggedIn = false;
             return result;
         }
+
+        // Debug logging (updated to reflect new parsing logic)
+        System.out.println("[Auth] Final authHash = " + authHash);
+
         Document filter = new Document("hash", authHash);
         var authRes = authDao.query(filter);
+        System.out.println("[Auth] matching records = " + authRes.size());
+        long nowSec = java.time.Instant.now().getEpochSecond();
+        long exp = authRes.isEmpty() ? -1L : authRes.get(0).getExpireTime();
+        System.out.println("[Auth] nowSec=" + nowSec + " expireTime=" + exp + " expired=" + (exp != -1 && nowSec > exp));
+
         if (authRes.size() == 0) {
             result.isLoggedIn = false;
             return result;
