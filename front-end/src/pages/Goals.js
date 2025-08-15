@@ -82,8 +82,10 @@ export default function Goals() {
   }
 
   async function remove(goalId) {
-    await api('/goals/delete', { method: 'POST', body: JSON.stringify({ goalId }) });
-    load();
+  const idStr = (goalId || '').toString();
+  if (!idStr || idStr.length !== 24) { alert('Invalid goal id'); return; }
+  await api('/goals/delete', { method: 'POST', body: JSON.stringify({ goalId: idStr }) });
+  load();
   }
 
   async function logout() {
@@ -208,7 +210,7 @@ export default function Goals() {
           ) : (
             <div className="goals-grid">
               {goals.map((g) => {
-                const id = g.goal?._id?.$oid || g.goal?._id || '';
+                const id = g.id || g.goalId || (typeof g.goal?._id === 'string' ? g.goal._id : g.goal?._id?.$oid) || '';
                 const isSavings = (g.goal?.type || '').toLowerCase() === 'savings';
                 const title = `${g.goal?.name}${!isSavings && g.goal?.category ? ` (${g.goal.category})` : ''}`;
                 const pct = Math.round(g.percent || 0);
@@ -239,7 +241,15 @@ export default function Goals() {
                             onClick={() => {
                               const el = document.getElementById(`contrib-${id}`);
                               const val = el?.value;
-                              if (val) { contribute(id, val); if (el) el.value = ''; }
+                              if (!id || id.length !== 24) { alert('Invalid goal id'); return; }
+                              if (val) {
+                                api('/goals/contribute', {
+                                  method: 'POST',
+                                  body: JSON.stringify({ goalId: id, amount: Number(val) })
+                                })
+                                  .then(() => { load(); if (el) el.value = ''; })
+                                  .catch(() => alert('Contribution failed'));
+                              }
                             }}
                           >
                             Contribute
