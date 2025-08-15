@@ -80,13 +80,13 @@ MongoDB running locally (default mongodb://localhost:27017)
 
 Open the project in IntelliJ and Run server.Server (listens on 1299), or:
 
-# from back-end/
+from back-end/
 mvn -q clean package
 # run from your IDE, or if you have a main class runner set up:
 # java -cp target/classes;... server.Server   (Windows)
 
 3) Frontend (React on 3001)
-# from front-end/
+from front-end/
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass   # fixes npm.ps1 block (PS only)
 $env:PORT=3001; npm install
 npm start
