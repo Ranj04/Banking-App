@@ -46,4 +46,7 @@ public class GoalDao extends BaseDao<GoalDto> {
         collection.deleteOne(filter);
         return GoalDto.fromDocument(doc);
     }
+
+    // Added accessor for raw collection (needed by GoalDaoExt helper)
+    public MongoCollection<Document> col() { return collection; }
 }

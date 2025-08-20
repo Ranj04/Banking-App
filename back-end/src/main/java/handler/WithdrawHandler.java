@@ -21,51 +21,48 @@ public class WithdrawHandler implements BaseHandler {
         String goalId = json.has("goalId") && !json.get("goalId").isJsonNull()
                 ? json.get("goalId").getAsString() : null;
 
+        // Replaced account-aware branch
         if (accountId != null && !accountId.isBlank()) {
             var acc = dao.AccountDao.getInstance()
                 .query(new org.bson.Document("_id", new org.bson.types.ObjectId(accountId))
-                    .append("userName", auth.userName))
+                       .append("userName", auth.userName))
                 .stream().findFirst().orElse(null);
             if (acc == null) return new HttpResponseBuilder().setStatus(StatusCodes.NOT_FOUND)
                 .setBody(new response.RestApiAppResponse<>(false, null, "Account not found"));
 
+            double amt = json.get("amount").getAsDouble();
+            if (amt <= 0) return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST);
+
             double bal = acc.balance == null ? 0.0 : acc.balance;
-            if (bal < amount) {
-                return new HttpResponseBuilder().setStatus("400 Bad Request")
-                    .setBody(new response.RestApiAppResponse<>(false, null, "Insufficient funds"));
-            }
-            acc.balance = bal - amount;
+            if (bal < amt) return new HttpResponseBuilder().setStatus("400 Bad Request")
+                .setBody(new response.RestApiAppResponse<>(false, null, "Insufficient funds"));
+
+            acc.balance = bal - amt;
             dao.AccountDao.getInstance().replace(new org.bson.types.ObjectId(acc.getUniqueId()), acc);
 
-            // Updated goal allocation logic with string comparison
             if (goalId != null && !goalId.isBlank()) {
-                org.bson.types.ObjectId gid;
-                try { gid = new org.bson.types.ObjectId(goalId); }
-                catch (IllegalArgumentException e) {
-                    return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
-                            .setBody(new response.RestApiAppResponse<>(false, null, "Invalid goalId"));
-                }
-                var goal = dao.GoalDao.getInstance().byIdForUser(gid, auth.userName);
+                var gid  = new org.bson.types.ObjectId(goalId);
+                var goal = dao.GoalDaoExt.byIdForUser(gid, auth.userName);
                 if (goal == null) return new HttpResponseBuilder().setStatus(StatusCodes.NOT_FOUND)
-                        .setBody(new response.RestApiAppResponse<>(false, null, "Goal not found"));
-                String goalAcc = goal.accountId == null ? null : goal.accountId.toHexString();
-                if (!accountId.equals(goalAcc)) {
-                    return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
-                            .setBody(new response.RestApiAppResponse<>(false, null, "Goal does not belong to account"));
-                }
+                    .setBody(new response.RestApiAppResponse<>(false, null, "Goal not found"));
+
+                String goalAcc = (goal.accountId == null) ? null : goal.accountId.toHexString();
+                if (!accountId.equals(goalAcc)) return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
+                    .setBody(new response.RestApiAppResponse<>(false, null, "Goal does not belong to account"));
+
                 double alloc = goal.allocatedAmount == null ? 0.0 : goal.allocatedAmount;
-                if (alloc < amount) {
-                    return new HttpResponseBuilder().setStatus("400 Bad Request")
-                            .setBody(new response.RestApiAppResponse<>(false, null, "Insufficient goal allocation"));
-                }
-                goal.allocatedAmount = alloc - amount;
-                dao.GoalDao.getInstance().replace(goal.id, goal);
+                if (alloc < amt) return new HttpResponseBuilder().setStatus("400 Bad Request")
+                    .setBody(new response.RestApiAppResponse<>(false, null, "Insufficient goal allocation"));
+
+                goal.allocatedAmount = alloc - amt;
+                // persist using GoalDao replace (GoalDto has 'id')
+                if (goal.id != null) dao.GoalDao.getInstance().replace(goal.id, goal);
             }
 
             var txn = new dto.TransactionDto();
             txn.setUserId(auth.userName);
             txn.setTransactionType(dto.TransactionType.Withdraw);
-            txn.setAmount(amount);
+            txn.setAmount(amt);
             txn.setAccountId(accountId);
             if (goalId != null && !goalId.isBlank()) txn.setGoalId(goalId);
             dao.TransactionDao.getInstance().put(txn);

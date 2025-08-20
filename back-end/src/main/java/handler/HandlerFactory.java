@@ -23,6 +23,7 @@ public class HandlerFactory {
             case "/goals/list" -> new handler.goals.ListGoalHandler();
             case "/goals/contribute" -> new handler.goals.ContributeGoalHandler();
             case "/goals/delete" -> new handler.goals.DeleteGoalHandler();
+            case "/goals/transfer" -> new handler.goals.TransferGoalsHandler();
             case "/spend/log" -> new handler.spend.LogSpendHandler();
             // Newly added account routes
             case "/accounts/create" -> new handler.accounts.CreateAccountHandler();
