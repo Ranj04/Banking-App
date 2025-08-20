@@ -307,7 +307,7 @@ select option { background: #0d2538; color:#e6eefc; }
 .app-header { display:flex; align-items:center; justify-content:space-between; padding:.75rem 1rem; background:#0d2538; color:#fff; border-radius:12px; margin-bottom:1.25rem; box-shadow:0 2px 4px rgba(0,0,0,.25); }
 .app-brand { line-height:1.1; }
 .brand-title { font-weight:600; font-size:1.1rem; }
-.brand-tag { font-size:.55rem; letter-spacing:.5px; opacity:.78; text-transform:uppercase; }
+.brand-tag { font-size:.55rem; letter-spacing:.5px; opacity:.78; }
 .nav-actions { display:flex; gap:.5rem; }
 .btn-link { background:none; border:none; color:#cfe6ff; font:inherit; padding:.4rem .65rem; cursor:pointer; border-radius:6px; transition:background .15s, color .15s; }
 .btn-link:hover { background:rgba(255,255,255,.12); }

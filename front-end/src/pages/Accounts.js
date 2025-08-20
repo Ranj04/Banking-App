@@ -6,14 +6,38 @@ const idOf = (obj) =>
 
 function StackedGoalBar({ balance, goals }) {
   const total = Math.max(0, Number(balance || 0));
-  const allocated = goals.reduce((s, g) => s + Number(g.allocatedAmount ?? g.amountAllocated ?? 0), 0);
+
+  // Try a variety of possible fields for a goal's allocated/saved amount.
+  const extractAllocated = (g) => {
+    const candidates = [
+      g.allocatedAmount,
+      g.amountAllocated,
+      g.balance,
+      g.currentBalance,
+      g.currentAmount,
+      g.savedAmount,
+      g.amount,
+      g.value,
+      g.amountCents != null ? g.amountCents / 100 : undefined,
+      g.valueCents != null ? g.valueCents / 100 : undefined,
+    ];
+    for (const v of candidates) {
+      if (v != null && !isNaN(v) && Number(v) > 0) return Number(v);
+    }
+    // Allow zero (not found / no allocation yet)
+    return 0;
+  };
+
+  const allocatedAmounts = goals.map(extractAllocated);
+  const allocated = allocatedAmounts.reduce((a, b) => a + b, 0);
+  const unallocated = Math.max(0, total - allocated);
   const palette = ['#5AB0FF', '#FFAF5A', '#9A8CFF', '#58DDA3', '#FF6E91', '#C1D161', '#00C9C8'];
 
   return (
     <div>
       <div className="stackbar" title={`Allocated: $${allocated.toFixed(2)} / $${total.toFixed(2)}`}>
         {goals.map((g, i) => {
-          const amt = Number(g.allocatedAmount ?? g.amountAllocated ?? 0);
+          const amt = allocatedAmounts[i];
           const width = total > 0 ? (amt / total) * 100 : 0;
           return (
             <div
@@ -24,11 +48,11 @@ function StackedGoalBar({ balance, goals }) {
             />
           );
         })}
-        {total - allocated > 0 && (
+        {unallocated > 0 && (
           <div
             className="stackbar__seg unalloc"
-            style={{ width: `${((total - allocated) / total) * 100}%` }}
-            title={`Unallocated: $${(total - allocated).toFixed(2)}`}
+            style={{ width: `${total ? (unallocated / total) * 100 : 0}%` }}
+            title={`Unallocated: $${unallocated.toFixed(2)}`}
           />
         )}
       </div>
@@ -37,13 +61,13 @@ function StackedGoalBar({ balance, goals }) {
         {goals.map((g, i) => (
           <span key={idOf(g)} className="legend__item">
             <i className="legend__dot" style={{ background: palette[i % palette.length] }} />
-            {(g.name || g.goal?.name)} — ${Number(g.allocatedAmount ?? g.amountAllocated ?? 0).toFixed(2)}
+            {(g.name || g.goal?.name)} — ${allocatedAmounts[i].toFixed(2)}
           </span>
         ))}
-        {total - allocated > 0 && (
+        {unallocated > 0 && (
           <span className="legend__item">
             <i className="legend__dot unalloc" />
-            Unallocated — ${(total - allocated).toFixed(2)}
+            Unallocated — ${unallocated.toFixed(2)}
           </span>
         )}
       </div>
@@ -54,17 +78,32 @@ function StackedGoalBar({ balance, goals }) {
 export default function Accounts() {
   const [accounts, setAccounts] = React.useState([]);
   const [goals, setGoals] = React.useState([]);
+  const [transactions, setTransactions] = React.useState([]);
 
   const [name, setName] = React.useState('');
   const [initialBalance, setInitialBalance] = React.useState('');
 
+  async function loadTransactions() {
+    const candidates = ['/getTransactions', '/transactions', '/transactions/list'];
+    for (const url of candidates) {
+      try {
+        const r = await fetch(url, { credentials: 'include' });
+        if (!r.ok) continue;
+        const j = await r.json();
+        const raw = j?.data || j?.transactions || j || [];
+        if (Array.isArray(raw)) { setTransactions(raw); break; }
+      } catch { /* ignore */ }
+    }
+  }
+
   const reload = async () => {
     const [a, g] = await Promise.all([
-      fetch('/accounts/list', { credentials: 'include' }).then(r => r.json()),
-      fetch('/goals/list', { credentials: 'include' }).then(r => r.json()),
+      fetch('/accounts/list', { credentials: 'include' }).then(r => r.json()).catch(() => ({})),
+      fetch('/goals/list', { credentials: 'include' }).then(r => r.json()).catch(() => ({})),
     ]);
     setAccounts(a?.data || []);
     setGoals(g?.data || []);
+    await loadTransactions();
   };
 
   React.useEffect(() => { reload(); }, []);
@@ -78,6 +117,28 @@ export default function Accounts() {
     }
     return map;
   }, [goals]);
+
+  // Build a computed allocation map from transactions if backend didn't send allocatedAmount.
+  const computedAllocMap = React.useMemo(() => {
+    if (!transactions.length) return {};
+    const map = {};
+    for (const t of transactions) {
+      // Derive amount
+      const cents = t.amountCents ?? t.valueCents ?? null;
+      let raw = t.amount ?? t.value ?? t.delta ?? t.change ?? (cents != null ? cents / 100 : null);
+      if (raw == null) raw = t.depositAmount ?? (t.withdrawAmount != null ? -Math.abs(t.withdrawAmount) : null);
+      if (raw == null && typeof t.amountStr === 'string') {
+        const m = t.amountStr.replace(/[$,]/g,'');
+        const num = Number(m); if (!Number.isNaN(num)) raw = num;
+      }
+      if (raw == null) continue;
+      const amt = Number(raw);
+      const gid = idOf(t.goalId || t.goal?.id || t.goal?._id || t.goal?._id?.$oid || t.goal); // broad fallback
+      if (!gid) continue;
+      map[gid] = (map[gid] || 0) + amt;
+    }
+    return map;
+  }, [transactions]);
 
   async function createAccount() {
     if (!name.trim()) return;
@@ -130,7 +191,13 @@ export default function Accounts() {
       <div className="grid">
         {accounts.map(a => {
           const aid = idOf(a);
-          const list = goalsByAccount[aid] || [];
+          const list = (goalsByAccount[aid] || []).map(g => {
+            if ((g.allocatedAmount ?? g.amountAllocated) == null) {
+              const computed = computedAllocMap[g.id];
+              if (computed != null) return { ...g, allocatedAmount: computed };
+            }
+            return g;
+          });
           return (
             <div key={aid} className="card">
               <div className="card__title">

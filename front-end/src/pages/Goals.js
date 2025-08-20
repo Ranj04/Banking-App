@@ -1,5 +1,7 @@
 import React from 'react';
 import Header from '../components/Header';
+import GoalCard from '../components/GoalCard';
+import { listGoals } from '../api/goalsApi';
 
 const idOf = (obj) =>
   (obj?.id) || (obj?._id?.$oid) || (obj?._id) || (typeof obj === 'string' ? obj : '');
@@ -13,13 +15,11 @@ export default function GoalsPage() {
   const [target, setTarget] = React.useState('');
 
   async function reload() {
-    const [a, g] = await Promise.all([
-      fetch('/accounts/list', { credentials: 'include' }).then(r => r.json()),
-      fetch('/goals/list', { credentials: 'include' }).then(r => r.json()),
-    ]);
-    const accs = a?.data || [];
+    const aRes = await fetch('/accounts/list', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
+    const accs = aRes?.data || [];
     setAccounts(accs);
-    setGoals(g?.data || []);
+    const normalizedGoals = await listGoals();
+    setGoals(normalizedGoals);
     if (!accountId && accs.length) setAccountId(idOf(accs[0]));
   }
 
@@ -75,16 +75,14 @@ export default function GoalsPage() {
 
       <div className="grid">
         {goals.map(g => (
-          <div key={idOf(g)} className="card goal-card">
-            <div className="card__title">
-              <div>{g.goal?.name || g.name}</div>
-              <span className="pill">in {g.accountName || g.account?.name || 'Savings'}</span>
-            </div>
-            <div className="muted">
-              Allocated: ${Number(g.allocatedAmount || 0).toFixed(2)}
-              {g.targetAmount ? ` / $${Number(g.targetAmount).toFixed(2)}` : ''}
-            </div>
-          </div>
+          <GoalCard
+            key={idOf(g)}
+            goal={g}
+            accountNameFor={(aid) => {
+              const acc = accounts.find(a => idOf(a) === idOf(aid));
+              return acc?.name || '';
+            }}
+          />
         ))}
       </div>
       </div>
