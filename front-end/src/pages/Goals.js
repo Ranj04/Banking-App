@@ -26,6 +26,8 @@ function Progress({ percent }) {
 export default function Goals() {
   const nav = useNavigate();
   const [goals, setGoals] = useState([]);
+  // Accounts for assigning a goal to an account
+  const [accounts, setAccounts] = useState([]);
   // A) spending summary memo
   const summary = React.useMemo(() => {
     const spending = (goals || []).filter(g => (g.goal?.type || '').toLowerCase() === 'spending');
@@ -40,9 +42,24 @@ export default function Goals() {
     type: 'savings',
     name: '',
     targetAmount: '',
-    category: 'Food',
+    category: 'General',
     dueDate: '',
+    accountId: '',
   });
+
+  // Load accounts once
+  useEffect(() => {
+    api('/accounts/list', { method: 'GET' })
+      .then(r => setAccounts(r.data || []))
+      .catch(() => setAccounts([]));
+  }, []);
+
+  // Default select first account if none chosen
+  useEffect(() => {
+    if (!form.accountId && accounts.length) {
+      setForm(f => ({ ...f, accountId: accounts[0].id }));
+    }
+  }, [accounts]);
 
   async function load() {
     const r = await api('/goals/list', { method: 'GET' });
@@ -54,7 +71,7 @@ export default function Goals() {
   async function createGoal(e) {
     e.preventDefault();
     setBusy(true);
-    await api('/goals/create', {
+  await api('/goals/create', {
       method: 'POST',
       body: JSON.stringify({
         type: form.type,
@@ -62,10 +79,11 @@ export default function Goals() {
         targetAmount: Number(form.targetAmount),
         category: form.type === 'spending' ? form.category : undefined,
         dueDateMillis: form.dueDate ? new Date(form.dueDate).getTime() : undefined,
+    accountId: form.accountId,
       }),
     });
     setBusy(false);
-    setForm({ type: 'savings', name: '', targetAmount: '', category: 'Food', dueDate: '' });
+  setForm({ type: 'savings', name: '', targetAmount: '', category: 'General', dueDate: '', accountId: accounts[0]?.id || '' });
     load();
   }
 
@@ -100,7 +118,8 @@ export default function Goals() {
     <main className="home-container goals-page">
       {/* Page actions */}
       <div className="page-actions">
-  <button className="btn btn-ghost" onClick={() => nav('/home')}>← Home</button>
+        <button className="btn btn-ghost" onClick={() => nav('/home')}>← Home</button>
+        <button className="btn btn-ghost" onClick={() => nav('/accounts')}>Accounts</button>
         <button className="btn btn-primary" onClick={logout}>Log out</button>
       </div>
 
@@ -165,6 +184,21 @@ export default function Goals() {
               </label>
             )}
 
+            {accounts.length > 0 && (
+              <label className="field">
+                <span>Account</span>
+                <select
+                  value={form.accountId}
+                  onChange={e => setForm({ ...form, accountId: e.target.value })}
+                >
+                  {accounts.map(a => {
+                    const label = a.name ? `${a.name}${a.type ? ` (${a.type})` : ''}` : a.id;
+                    return <option key={a.id} value={a.id}>{label}</option>;
+                  })}
+                </select>
+              </label>
+            )}
+
             <div className="form-actions">
               <button className="btn btn-primary" disabled={busy} type="submit">
                 {busy ? 'Saving…' : 'Add goal'}
@@ -214,13 +248,19 @@ export default function Goals() {
                 const isSavings = (g.goal?.type || '').toLowerCase() === 'savings';
                 const title = `${g.goal?.name}${!isSavings && g.goal?.category ? ` (${g.goal.category})` : ''}`;
                 const pct = Math.round(g.percent || 0);
+                const acctLabel = g.accountName
+                  ? `${g.accountName}${g.accountType ? ` · ${g.accountType}` : ''}`
+                  : 'Unassigned';
                 return (
                   <div key={id} className="goal-card">
                     <div className="goal-card__head">
                       <div className="goal-card__title">{title}</div>
-                      <span className={`chip ${isSavings ? 'chip--green' : 'chip--blue'}`}>
-                        {isSavings ? 'Savings' : 'Spending'}
-                      </span>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <span className={`chip ${isSavings ? 'chip--green' : 'chip--blue'}`}>
+                          {isSavings ? 'Savings' : 'Spending'}
+                        </span>
+                        <span className="chip">{acctLabel}</span>
+                      </div>
                     </div>
 
                     <div className="goal-card__stats">

@@ -10,6 +10,7 @@ import {
 import { Home } from './Home';
 import SavingsGoal from './SavingsGoal'; // Import the SavingsGoal component
 import Goals from './pages/Goals'; // Goals page
+import Accounts from './pages/Accounts'; // Accounts page
 import ProtectedRoute from './ProtectedRoute';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -30,6 +31,10 @@ const router = createBrowserRouter([
   {
     path: "/goals", // Goals tracking page
   element: <ProtectedRoute><Goals /></ProtectedRoute>,
+  },
+  {
+    path: "/accounts", // Accounts management page
+  element: <ProtectedRoute><Accounts /></ProtectedRoute>,
   },
 ]);
 

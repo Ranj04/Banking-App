@@ -1,0 +1,142 @@
+/* Page container matches Home */
+.accounts-page {
+  width: min(1120px, 100% - 48px);
+  margin-inline: auto;
+  padding-block: 24px 64px;
+}
+
+.accounts-page h2 { margin: 0 0 12px; }
+
+/* Create-account card, centered and limited width */
+.accounts-create {
+  width: min(760px, 100%);
+  margin: 8px auto 32px;   /* increased bottom space */
+  border-radius: 16px;
+  padding: 20px;
+}
+
+/* Nice, consistent inputs */
+.form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.accounts-create .input,
+.accounts-create .select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e9f0f6;
+  padding: 10px 12px;
+  border-radius: 10px;
+  min-width: 220px;
+}
+
+/* Grid of existing accounts */
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 24px; /* space above grid */
+}
+
+/* Individual account card bits */
+.acct-card .acct-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.acct-balance { margin-top: 8px; font-size: 1.05rem; }
+
+/* Center the empty state card */
+.empty-card {
+  width: min(680px, 100%);
+  margin: 28px auto 0;     /* extra top space */
+  text-align: center;
+}
+
+/* Safety spacing if multiple top-level cards appear */
+.accounts-page > .card + .card {
+  margin-top: 24px;
+}
+
+/* Responsive: stack form inputs on small screens */
+@media (max-width: 640px) {
+  .accounts-create .input,
+  .accounts-create .select {
+    min-width: 100%;
+  }
+}
+
+/* --- Dark themed select --- */
+.select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #e9f0f6;
+  padding: 10px 40px 10px 12px;  /* room for chevron */
+  border-radius: 12px;
+  line-height: 1.2;
+  min-height: 44px;
+  min-width: 220px;
+  outline: none;
+  transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.select:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.select:focus {
+  border-color: rgba(56,189,248,0.45);
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.18);
+}
+
+/* custom chevron */
+.select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-size: 12px 12px;
+  opacity: .85;
+  /* white chevron svg */
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="%23E9F0F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+}
+
+/* Try to style the dropdown list (browser support varies) */
+.select option {
+  background-color: #0e2330;   /* dark surface */
+  color: #e9f0f6;
+}
+.select option:disabled { color: #97a6b2; }
+
+/* Page actions + buttons shared styling (appended per request) */
+.page-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.btn { border-radius: 10px; padding: 10px 14px; }
+.btn-ghost {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: #e9f0f6;
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.08); }
