@@ -24,6 +24,9 @@ public class HandlerFactory {
             case "/goals/contribute" -> new handler.goals.ContributeGoalHandler();
             case "/goals/delete" -> new handler.goals.DeleteGoalHandler();
             case "/spend/log" -> new handler.spend.LogSpendHandler();
+            // Newly added account routes
+            case "/accounts/create" -> new handler.accounts.CreateAccountHandler();
+            case "/accounts/list" -> new handler.accounts.ListAccountsHandler();
             default -> new FallbackHandler();
         };
     }

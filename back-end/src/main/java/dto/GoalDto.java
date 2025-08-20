@@ -18,6 +18,9 @@ public class GoalDto extends BaseDto {
     public Long  createdAt;
     public Boolean active = true;
     public List<Contribution> contributions = new ArrayList<>(); // for savings
+    // Newly added fields
+    public org.bson.types.ObjectId accountId; // parent account
+    public Double allocatedAmount;            // default 0.0 for savings envelopes
 
     public static class Contribution {
         public Double amount;
@@ -54,7 +57,9 @@ public class GoalDto extends BaseDto {
                 .append("dueDateMillis", dueDateMillis)
                 .append("createdAt", createdAt)
                 .append("active", active)
-                .append("contributions", contribDocs);
+                .append("contributions", contribDocs)
+                .append("accountId", accountId)
+                .append("allocatedAmount", allocatedAmount);
     }
 
     public static GoalDto fromDocument(Document d) {
@@ -79,6 +84,15 @@ public class GoalDto extends BaseDto {
                 }
             }
         }
+        // Robust allocatedAmount defaulting
+        Object alloc = d.get("allocatedAmount");
+        if (alloc instanceof Number) {
+            g.allocatedAmount = ((Number) alloc).doubleValue();
+        } else {
+            g.allocatedAmount = 0.0;
+        }
+        // accountId may be null for legacy docs
+        g.accountId = d.getObjectId("accountId");
         return g;
     }
 }

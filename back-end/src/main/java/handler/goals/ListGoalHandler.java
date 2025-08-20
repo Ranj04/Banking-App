@@ -21,6 +21,10 @@ public class ListGoalHandler implements BaseHandler {
         public double progressAmount;
         public double percent;
         public String periodLabel;
+        // Newly added account fields
+        public String accountId;
+        public String accountName;
+        public String accountType;
     }
 
     @Override public HttpResponseBuilder handleRequest(ParsedRequest req) {
@@ -40,8 +44,24 @@ public class ListGoalHandler implements BaseHandler {
 
         for (GoalDto g : goals) {
             GoalView v = new GoalView();
-            v.id = (g.id == null) ? null : g.id.toHexString(); // adapted from instruction using existing field name
+            v.id = g.getUniqueId();
             v.goal = g;
+            // Initialize account fields
+            v.accountId = (g.accountId == null) ? null : g.accountId.toHexString();
+            v.accountName = null;
+            v.accountType = null;
+            if (g.accountId != null) {
+                var acc = dao.AccountDao.getInstance().query(
+                        new org.bson.Document("_id", g.accountId)
+                ).stream().findFirst().orElse(null);
+                if (acc != null) {
+                    v.accountName = acc.name;
+                    v.accountType = acc.type;
+                }
+            } else {
+                // Optional legacy label
+                v.accountName = "Unassigned";
+            }
             if ("savings".equalsIgnoreCase(g.type)) {
                 double sum = g.contributions == null ? 0.0 :
                         g.contributions.stream().mapToDouble(c -> c.amount == null ? 0.0 : c.amount).sum();

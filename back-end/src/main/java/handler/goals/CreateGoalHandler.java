@@ -8,9 +8,11 @@ import handler.StatusCodes;
 import request.ParsedRequest;
 import response.HttpResponseBuilder;
 import response.RestApiAppResponse;
+// added for account lookup
+import dao.AccountDao;
 
 public class CreateGoalHandler implements BaseHandler {
-    static class CreateGoalBody { String type; String name; Double targetAmount; String category; Long dueDateMillis; }
+    static class CreateGoalBody { String type; String name; Double targetAmount; String category; Long dueDateMillis; String accountId; }
 
     @Override public HttpResponseBuilder handleRequest(ParsedRequest req) {
         var auth = AuthFilter.doFilter(req);
@@ -20,6 +22,32 @@ public class CreateGoalHandler implements BaseHandler {
         if (body == null || body.type == null || body.name == null || body.targetAmount == null)
             return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST);
 
+        // Normalize and validate accountId
+        String accountIdStr = body.accountId;
+        if (accountIdStr == null || accountIdStr.isBlank()) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
+                    .setBody(new RestApiAppResponse<>(false, null, "accountId required"));
+        }
+        if (accountIdStr.startsWith("{")) {
+            try {
+                var j = com.google.gson.JsonParser.parseString(accountIdStr).getAsJsonObject();
+                if (j.has("$oid")) accountIdStr = j.get("$oid").getAsString();
+            } catch (Exception ignored) {}
+        }
+        org.bson.types.ObjectId accId;
+        try {
+            accId = new org.bson.types.ObjectId(accountIdStr);
+        } catch (IllegalArgumentException e) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
+                    .setBody(new RestApiAppResponse<>(false, null, "Invalid accountId"));
+        }
+        // Ownership check
+        var acc = AccountDao.getInstance().query(new org.bson.Document("_id", accId)).stream().findFirst().orElse(null);
+        if (acc == null || !auth.userName.equals(acc.userName)) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.UNAUTHORIZED)
+                    .setBody(new RestApiAppResponse<>(false, null, "Account not owned by user"));
+        }
+
         GoalDto g = new GoalDto();
         g.userName = auth.userName;
         g.type = body.type;
@@ -28,6 +56,8 @@ public class CreateGoalHandler implements BaseHandler {
         g.category = "spending".equalsIgnoreCase(body.type) ? (body.category == null ? "General" : body.category) : null;
         g.dueDateMillis = body.dueDateMillis;
         g.createdAt = System.currentTimeMillis();
+        g.accountId = accId;
+        g.allocatedAmount = 0.0; // initialize
 
         GoalDao.getInstance().put(g);
         return new HttpResponseBuilder().setStatus(StatusCodes.OK)
