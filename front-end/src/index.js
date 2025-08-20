@@ -7,7 +7,7 @@ import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
-import { Home } from './Home';
+import Home from './Home';
 import SavingsGoal from './SavingsGoal'; // Import the SavingsGoal component
 import Goals from './pages/Goals'; // Goals page
 import Accounts from './pages/Accounts'; // Accounts page
