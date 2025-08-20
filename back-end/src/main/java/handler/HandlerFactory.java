@@ -27,6 +27,7 @@ public class HandlerFactory {
             // Newly added account routes
             case "/accounts/create" -> new handler.accounts.CreateAccountHandler();
             case "/accounts/list" -> new handler.accounts.ListAccountsHandler();
+            case "/accounts/transfer" -> new handler.accounts.TransferBetweenAccountsHandler();
             default -> new FallbackHandler();
         };
     }

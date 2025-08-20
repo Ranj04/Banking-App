@@ -11,6 +11,9 @@ public class TransactionDto extends BaseDto {
     private Double amount;
     private TransactionType transactionType;
     private Long timestamp;
+    // added fields
+    private String accountId;   // optional: the account this txn touches
+    private String goalId;      // optional: future use
 
     public TransactionDto() {
         timestamp = Instant.now().toEpochMilli();
@@ -61,13 +64,20 @@ public class TransactionDto extends BaseDto {
         this.transactionType = transactionType;
     }
 
+    public String getAccountId() { return accountId; }
+    public void setAccountId(String accountId) { this.accountId = accountId; }
+    public String getGoalId() { return goalId; }
+    public void setGoalId(String goalId) { this.goalId = goalId; }
+
     public Document toDocument() {
         return new Document()
                 .append("userId", userId)
                 .append("toId", toId)
                 .append("amount", amount)
                 .append("transactionType", transactionType.toString())
-                .append("timestamp", timestamp);
+                .append("timestamp", timestamp)
+                .append("accountId", accountId)
+                .append("goalId", goalId);
     }
 
     public static TransactionDto fromDocument(Document document) {
@@ -78,6 +88,9 @@ public class TransactionDto extends BaseDto {
         transaction.amount = document.getDouble("amount");
         transaction.transactionType = TransactionType.valueOf(
                 document.getString("transactionType"));
+        transaction.userId = document.getString("userId");
+        transaction.accountId = document.getString("accountId");
+        transaction.goalId = document.getString("goalId");
         return transaction;
     }
 }
