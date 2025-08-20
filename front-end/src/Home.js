@@ -72,39 +72,41 @@ export default function Home() {
         <>
             <Header />
             <div className="page">
-                <h1>Welcome, {username || 'Friend'}!</h1>
-
-                <div className="card">
-                    <QuickActions onAnyChange={loadRecent} />
-                </div>
-
-                <div className="card">
-                    <h3>Recent activity</h3>
-                    {txns.length === 0 ? (
-                        <div className="muted">No transactions yet.</div>
-                    ) : (
-                        <table className="txn-table">
-                            <thead>
-                                <tr>
-                                    <th>Amount</th><th>Type</th><th>Account</th><th>Goal</th><th>Time</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {txns.map(t => {
-                                    const amtClass = t.amount > 0 ? 'amt-pos' : (t.amount < 0 ? 'amt-neg' : '');
-                                    return (
-                                        <tr key={t.id}>
-                                            <td className={amtClass}>{t.amount >= 0 ? '+' : '-'}${Math.abs(t.amount).toFixed(2)}</td>
-                                            <td>{t.type}</td>
-                                            <td>{t.accountName}</td>
-                                            <td>{t.goalName}</td>
-                                            <td>{new Date(t.createdAt).toLocaleString()}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    )}
+                <div className="page__inner">
+                    <div className="card card--padded">
+                        <h1>Welcome, {username || 'Friend'}!</h1>
+                    </div>
+                    <div className="card card--padded">
+                        <QuickActions onAnyChange={loadRecent} />
+                    </div>
+                    <div className="card card--padded">
+                        <h3>Recent activity</h3>
+                        {txns.length === 0 ? (
+                            <div className="muted">No transactions yet.</div>
+                        ) : (
+                            <table className="txn-table">
+                                <thead>
+                                    <tr>
+                                        <th>Amount</th><th>Type</th><th>Account</th><th>Goal</th><th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {txns.map(t => {
+                                        const amtClass = t.amount > 0 ? 'amt-pos' : (t.amount < 0 ? 'amt-neg' : '');
+                                        return (
+                                            <tr key={t.id}>
+                                                <td className={amtClass}>{t.amount >= 0 ? '+' : '-'}${Math.abs(t.amount).toFixed(2)}</td>
+                                                <td>{t.type}</td>
+                                                <td>{t.accountName}</td>
+                                                <td>{t.goalName}</td>
+                                                <td>{new Date(t.createdAt).toLocaleString()}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
                 </div>
             </div>
         </>

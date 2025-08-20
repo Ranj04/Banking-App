@@ -16,7 +16,7 @@ export function useUsername() {
     }
 
     (async () => {
-      const candidates = ['/auth/whoami', '/whoami', '/me', '/user/me'];
+      const candidates = ['/auth/me', '/user/profile', '/auth/profile'];
       for (const c of candidates) {
         const j = await tryFetch(c);
         const name = j?.data?.userName || j?.userName || j?.username || j?.name;

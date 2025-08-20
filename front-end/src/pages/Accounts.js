@@ -4,10 +4,58 @@ import Header from '../components/Header';
 const idOf = (obj) =>
   (obj?.id) || (obj?._id?.$oid) || (obj?._id) || (typeof obj === 'string' ? obj : '');
 
-function StackedGoalBar({ balance, goals }) {
+function StackedGoalBar({ balance, goals, account }) {
   const total = Math.max(0, Number(balance || 0));
 
-  // Try a variety of possible fields for a goal's allocated/saved amount.
+  // If account has rich allocation data, use it directly
+  if (account?.allocations && Array.isArray(account.allocations)) {
+    const allocated = Number(account.sumAllocated || 0);
+    const unallocated = Number(account.unallocated || Math.max(0, total - allocated));
+    const palette = ['#5AB0FF', '#FFAF5A', '#9A8CFF', '#58DDA3', '#FF6E91', '#C1D161', '#00C9C8'];
+
+    return (
+      <div>
+        <div className="stackbar" title={`Allocated: $${allocated.toFixed(2)} / $${total.toFixed(2)}`}>
+          {account.allocations.map((alloc, i) => {
+            const amt = Number(alloc.allocatedAmount || 0);
+            const width = total > 0 ? (amt / total) * 100 : 0;
+            return (
+              <div
+                key={alloc.goalId || i}
+                className="stackbar__seg"
+                style={{ width: `${width}%`, background: palette[i % palette.length] }}
+                title={`${alloc.goalName}: $${amt.toFixed(2)} (${total ? Math.round(width) : 0}%)`}
+              />
+            );
+          })}
+          {unallocated > 0 && (
+            <div
+              className="stackbar__seg unalloc"
+              style={{ width: `${total ? (unallocated / total) * 100 : 0}%` }}
+              title={`Unallocated: $${unallocated.toFixed(2)}`}
+            />
+          )}
+        </div>
+
+        <div className="legend">
+          {account.allocations.map((alloc, i) => (
+            <span key={alloc.goalId || i} className="legend__item">
+              <i className="legend__dot" style={{ background: palette[i % palette.length] }} />
+              {alloc.goalName} — ${Number(alloc.allocatedAmount || 0).toFixed(2)}
+            </span>
+          ))}
+          {unallocated > 0 && (
+            <span className="legend__item">
+              <i className="legend__dot unalloc" />
+              Unallocated — ${unallocated.toFixed(2)}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback to old logic for basic /accounts/list response
   const extractAllocated = (g) => {
     const candidates = [
       g.allocatedAmount,
@@ -24,7 +72,6 @@ function StackedGoalBar({ balance, goals }) {
     for (const v of candidates) {
       if (v != null && !isNaN(v) && Number(v) > 0) return Number(v);
     }
-    // Allow zero (not found / no allocation yet)
     return 0;
   };
 
@@ -97,11 +144,30 @@ export default function Accounts() {
   }
 
   const reload = async () => {
-    const [a, g] = await Promise.all([
-      fetch('/accounts/list', { credentials: 'include' }).then(r => r.json()).catch(() => ({})),
+    // Try rich endpoint first, fall back to basic
+    let accountsData = [];
+    try {
+      const r = await fetch('/accounts/listWithAllocations', { credentials: 'include' });
+      if (r.ok) {
+        const j = await r.json();
+        accountsData = j?.data || [];
+      }
+    } catch {}
+    
+    if (!accountsData.length) {
+      try {
+        const r = await fetch('/accounts/list', { credentials: 'include' });
+        if (r.ok) {
+          const j = await r.json();
+          accountsData = j?.data || [];
+        }
+      } catch {}
+    }
+
+    const [g] = await Promise.all([
       fetch('/goals/list', { credentials: 'include' }).then(r => r.json()).catch(() => ({})),
     ]);
-    setAccounts(a?.data || []);
+    setAccounts(accountsData);
     setGoals(g?.data || []);
     await loadTransactions();
   };
@@ -161,55 +227,54 @@ export default function Accounts() {
     <>
       <Header />
       <div className="page">
-        <h1>Accounts</h1>
-
-      <div className="card">
-        <h3>Create a savings account</h3>
-        <div className="row">
-          <input
-            placeholder="Account name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-          />
-          <input
-            placeholder="Initial amount (optional)"
-            type="number"
-            step="0.01"
-            value={initialBalance}
-            onChange={e => setInitialBalance(e.target.value)}
-          />
-          <button className="btn btn-primary" onClick={createAccount}>Create</button>
-        </div>
-      </div>
-
-      <div className="card">
-        <h3>Connect your bank</h3>
-        <p className="muted">Hook up your external bank to view balances. (Plaid integration placeholder)</p>
-        <button className="btn">Connect with Plaid</button>
-      </div>
-
-      <div className="grid">
-        {accounts.map(a => {
-          const aid = idOf(a);
-          const list = (goalsByAccount[aid] || []).map(g => {
-            if ((g.allocatedAmount ?? g.amountAllocated) == null) {
-              const computed = computedAllocMap[g.id];
-              if (computed != null) return { ...g, allocatedAmount: computed };
-            }
-            return g;
-          });
-          return (
-            <div key={aid} className="card">
-              <div className="card__title">
-                <div>{a.name}</div>
-                <span className="pill">savings</span>
-              </div>
-              <div className="muted">Balance: ${Number(a.balance || 0).toFixed(2)}</div>
-              <StackedGoalBar balance={a.balance} goals={list} />
+        <div className="page__inner">
+          <h1>Accounts</h1>
+          <div className="card card--padded">
+            <h3>Create a savings account</h3>
+            <div className="row">
+              <input
+                placeholder="Account name"
+                value={name}
+                onChange={e => setName(e.target.value)}
+              />
+              <input
+                placeholder="Initial amount (optional)"
+                type="number"
+                step="0.01"
+                value={initialBalance}
+                onChange={e => setInitialBalance(e.target.value)}
+              />
+              <button className="btn btn-primary" onClick={createAccount}>Create</button>
             </div>
-          );
-        })}
-      </div>
+          </div>
+          <div className="card card--padded">
+            <h3>Connect your bank</h3>
+            <p className="muted">Hook up your external bank to view balances. (Plaid integration placeholder)</p>
+            <button className="btn">Connect with Plaid</button>
+          </div>
+          <div className="grid">
+            {accounts.map(a => {
+              const aid = idOf(a);
+              const list = (goalsByAccount[aid] || []).map(g => {
+                if ((g.allocatedAmount ?? g.amountAllocated) == null) {
+                  const computed = computedAllocMap[g.id];
+                  if (computed != null) return { ...g, allocatedAmount: computed };
+                }
+                return g;
+              });
+              return (
+                <div key={aid} className="card card--padded">
+                  <div className="card__title">
+                    <div>{a.name}</div>
+                    <span className="pill">savings</span>
+                  </div>
+                  <div className="muted">Balance: ${Number(a.balance || 0).toFixed(2)}</div>
+                  <StackedGoalBar balance={a.balance} goals={list} account={a} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </>
   );

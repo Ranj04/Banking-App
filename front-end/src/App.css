@@ -151,19 +151,193 @@
 }
 *{box-sizing:border-box}
 html,body,#root{height:100%}
-body{
-  margin:0; color:var(--text);
-  font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica Neue,Arial,Noto Sans;
-  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+/* ====== Theme tokens ====== */
+:root{
+  --bg: #071822;
+  --bg-elev: #0e2432;
+  --bg-card: rgba(16, 33, 47, 0.85);
+  --border: rgba(255,255,255,0.06);
+  --text: #dbe9f7;
+  --text-muted: #9fb4c5;
+  --accent: #3b82f6;            /* blue-500 */
+  --accent-2: #22c55e;          /* green-500 */
+  --danger: #ef4444;            /* red-500 */
+  --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  --radius: 16px;
 }
 
-/* Layout + card */
-.auth-wrapper{min-height:100%;display:grid;place-items:center;padding:32px 16px}
-.card{
-  width:100%;max-width:420px;background:var(--card);
-  border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:24px;
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
+/* ====== Base ====== */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body{
+  margin:0;
+  background: radial-gradient(1200px 700px at 20% -20%, #0e2a3c, transparent 60%),
+              radial-gradient(1000px 600px at 80% -10%, #112f42, transparent 60%),
+              var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
+
+/* ====== Layout ====== */
+.page{
+  display:flex;
+  justify-content:center;
+  padding: 32px 16px 80px;
+}
+.page__inner{
+  width:100%;
+  max-width: 1000px;
+  display: grid;
+  gap: 20px;
+}
+.header-spacer{ height: 12px; }
+
+h1,h2,h3{ margin:0 0 10px; line-height:1.15; }
+h1{ font-size: 34px; }
+h2{ font-size: 22px; }
+h3{ font-size: 18px; color: var(--text); }
+
+/* ====== Card ====== */
+.card{
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+.card--padded{ padding: 22px; }
+.card__title{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin-bottom: 12px;
+}
+
+/* ====== Auth (login) layout ====== */
+.auth-wrapper{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:40px 16px;
+}
+/* Constrain login card to a more square / compact width */
+.card.card--auth{
+  width:100%;
+  max-width:420px; /* keeps it from stretching full width */
+  margin:0 auto;
+}
+@media (max-width:480px){
+  .card.card--auth{ max-width:100%; }
+}
+
+/* ====== Form controls ====== */
+.input, .select{
+  width: 100%;
+  padding: 12px 12px;
+  color: var(--text);
+  background: #0f1e2b;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+  appearance: none;
+}
+.input::placeholder{ color: #7993a7; }
+.select:disabled, .input:disabled{ opacity:.6; cursor:not-allowed; }
+.input:focus, .select:focus{
+  border-color: rgba(59,130,246,.6);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.25);
+  background: #102233;
+}
+
+/* force native dropdown UI for reliability */
+.select--native {
+  appearance: auto;
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  background: #0f1e2b; /* keep theme */
+}
+
+/* ====== Buttons ====== */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: #163154;
+  color: #fff;
+  cursor:pointer;
+  transition: transform .06s ease, background .15s, border-color .15s, opacity .15s;
+}
+.btn:hover{ transform: translateY(-1px); }
+.btn:active{ transform: translateY(0); }
+.btn:disabled{ opacity: .5; cursor:not-allowed; }
+.btn--primary{
+  background: var(--accent);
+  border-color: rgba(255,255,255,.08);
+}
+.btn--ghost{
+  background: #122237;
+}
+.btn--danger{
+  background: var(--danger);
+}
+
+/* ====== Helper / layout bits ====== */
+.row{ display:flex; gap:10px; }
+.grid-qa{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pill{
+  font-size: 12px; color: #c9deee; background: rgba(255,255,255,.08);
+  padding: 2px 10px; border-radius: 999px;
+}
+.muted { color: var(--text-muted); }
+
+/* ====== Tables ====== */
+.table{
+  width:100%; border-collapse: collapse;
+}
+.table th, .table td{
+  text-align:left; padding: 10px 8px; border-bottom: 1px solid var(--border);
+}
+.table th{ color:#cfe3f5; font-weight:600; }
+.amt-pos{ color: var(--accent-2); }
+.amt-neg{ color: #ff7b7b; }
+
+/* ====== Toast ====== */
+.toast{
+  position: fixed; right: 18px; bottom: 18px;
+  padding: 12px 14px; border-radius: 12px; box-shadow: var(--shadow);
+  font-size: 14px; max-width: 380px; z-index: 9999;
+}
+.toast--ok{  background:#1c2b20; color:#b8ffcb; }
+.toast--error{ background:#2b1b1b; color:#ffb3b3; }
+
+/* Inline success/error message shown under cards */
+.inline-notice{
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  line-height: 1.3;
+  opacity: 1;
+  animation: inlineFadeIn .18s ease-out;
+}
+.inline-notice--ok   { background:#1c2b20; color:#b8ffcb; }
+.inline-notice--info { background:#122237; color:#dbe9f7; }
+.inline-notice--error{ background:#2b1b1b; color:#ffb3b3; }
+
+@keyframes inlineFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ====== Hero welcome card ====== */
+.hero{
+  background: linear-gradient(180deg, rgba(26,51,77,.85), rgba(16,33,47,.9));
+}
+
+/* This centers the content, gives cards a glassy dark look, styles inputs/selects, and makes buttons consistent. */
 .card h1{margin:0 0 6px;font-size:22px}
 .card p.sub{margin:0 0 16px;color:var(--muted)}
 
@@ -337,3 +511,54 @@ select option { background: #0d2538; color:#e6eefc; }
 /* Utilities */
 .small { font-size:.65rem; }
 .muted.small { font-size:.65rem; }
+
+/* --- Layout helpers (added) --- */
+/* Center page content and constrain width via inner wrapper */
+.page {
+  display: flex;
+  justify-content: center;           /* centers horizontally */
+  padding: 24px 16px;
+}
+
+.page__inner {
+  width: 100%;
+  max-width: 960px;                  /* keeps cards centered/narrow */
+  display: grid;
+  gap: 16px;
+}
+
+/* Base card sizing (lightweight variant) */
+.card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+/* small status pill */
+.pill {
+  font-size: 12px;
+  padding: 2px 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+}
+
+/* amounts */
+.amt-pos { color: #0dd18a; }
+.amt-neg { color: #ff7b7b; }
+
+/* toast (shared) */
+.toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+  z-index: 9999;
+  font-size: 14px;
+  max-width: 380px;
+}
+.toast--ok    { background: #1c2b20; color: #b8ffcb; }
+.toast--error { background: #2b1b1b; color: #ffb3b3; }
+
