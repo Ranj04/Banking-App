@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import './Goals.css';
+import idOf from '../utils/idOf';
 
 // tiny helper to call our API consistently
 async function api(path, init = {}) {
@@ -23,11 +24,78 @@ function Progress({ percent }) {
   );
 }
 
+// Simple goal-to-goal transfer widget
+function TransferBetweenGoals({ accounts, goals, onDone }) {
+  const [fromAcc, setFromAcc] = React.useState('');
+  const [toAcc, setToAcc] = React.useState('');
+  const [fromGoal, setFromGoal] = React.useState('');
+  const [toGoal, setToGoal] = React.useState('');
+  const [amt, setAmt] = React.useState('');
+
+  React.useEffect(() => {
+    if (!fromAcc && accounts.length) setFromAcc(idOf(accounts[0]));
+  }, [accounts, fromAcc]);
+
+  const goalsFor = React.useCallback((accId) => goals.filter(g => idOf(g.accountId) === accId), [goals]);
+
+  async function submit(){
+    if(!fromAcc || !toAcc || !fromGoal || !toGoal || !amt) return;
+    try {
+      await fetch('/accounts/transfer', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          fromAccountId: fromAcc,
+            toAccountId: toAcc,
+            fromGoalId: fromGoal,
+            toGoalId: toGoal,
+            amount: Number(amt)
+        })
+      });
+      setAmt('');
+      onDone?.();
+    } catch {/* ignore */}
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3>Transfer funds between goals</h3>
+      <div className="row" style={{gap:8, flexWrap:'wrap', marginTop:8}}>
+        <select value={fromAcc} onChange={e=>{ setFromAcc(e.target.value); setFromGoal(''); }}>
+          {accounts.map(a => <option key={idOf(a)} value={idOf(a)}>{a.name} ({a.type})</option>)}
+        </select>
+        <select value={fromGoal} onChange={e=>setFromGoal(e.target.value)}>
+          <option value="">From goal…</option>
+          {goalsFor(fromAcc).map(g => <option key={idOf(g)} value={idOf(g)}>{g.goal?.name || g.name}</option>)}
+        </select>
+      </div>
+      <div className="row" style={{gap:8, flexWrap:'wrap', marginTop:8}}>
+        <select value={toAcc} onChange={e=>{ setToAcc(e.target.value); setToGoal(''); }}>
+          <option value="">To account…</option>
+          {accounts.map(a => <option key={idOf(a)} value={idOf(a)}>{a.name} ({a.type})</option>)}
+        </select>
+        <select value={toGoal} onChange={e=>setToGoal(e.target.value)}>
+          <option value="">To goal…</option>
+          {goalsFor(toAcc).map(g => <option key={idOf(g)} value={idOf(g)}>{g.goal?.name || g.name}</option>)}
+        </select>
+        <input type="number" step="0.01" placeholder="Amount" value={amt} onChange={e=>setAmt(e.target.value)} />
+      </div>
+      <div style={{marginTop:10}}>
+        <button className="btn btn-primary" disabled={!fromAcc || !toAcc || !fromGoal || !toGoal || !amt} onClick={submit}>Transfer</button>
+      </div>
+    </div>
+  );
+}
+
 export default function Goals() {
   const nav = useNavigate();
+  const [search] = useSearchParams();
   const [goals, setGoals] = useState([]);
   // Accounts for assigning a goal to an account
   const [accounts, setAccounts] = useState([]);
+  // Inline allocation editing state
+  const [editingId, setEditingId] = useState(null);
+  const [editVal, setEditVal] = useState("");
   // A) spending summary memo
   const summary = React.useMemo(() => {
     const spending = (goals || []).filter(g => (g.goal?.type || '').toLowerCase() === 'spending');
@@ -47,19 +115,30 @@ export default function Goals() {
     accountId: '',
   });
 
-  // Load accounts once
-  useEffect(() => {
+  // Load accounts helper + initial
+  const loadAccounts = React.useCallback(() => {
     api('/accounts/list', { method: 'GET' })
       .then(r => setAccounts(r.data || []))
       .catch(() => setAccounts([]));
   }, []);
+  useEffect(() => { loadAccounts(); }, [loadAccounts]);
 
   // Default select first account if none chosen
   useEffect(() => {
     if (!form.accountId && accounts.length) {
       setForm(f => ({ ...f, accountId: accounts[0].id }));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accounts]);
+
+  // Preselect account if ?accountId= is present and valid
+  useEffect(() => {
+    const q = search.get('accountId');
+    if (q && accounts.length) {
+      const exists = accounts.find(a => (a.id || a._id?.$oid || a._id) === q);
+      if (exists) setForm(f => ({ ...f, accountId: q }));
+    }
+  }, [search, accounts]);
 
   async function load() {
     const r = await api('/goals/list', { method: 'GET' });
@@ -87,11 +166,7 @@ export default function Goals() {
     load();
   }
 
-  async function contribute(goalId, amount) {
-    if (!amount) return;
-    await api('/goals/contribute', { method: 'POST', body: JSON.stringify({ goalId, amount: Number(amount) }) });
-    load();
-  }
+  // Inline contribution actions handled directly in JSX; removed standalone contribute() to avoid lint unused warning
 
   async function logSpend(category, amount) {
     if (!amount) return;
@@ -105,6 +180,29 @@ export default function Goals() {
   await api('/goals/delete', { method: 'POST', body: JSON.stringify({ goalId: idStr }) });
   load();
   }
+
+  function startEdit(g, idVal) {
+    const gid = idVal || idOf(g) || idOf(g?.goal?._id);
+    if (!gid) return;
+    setEditingId(gid);
+    setEditVal(String(Number(g.allocatedAmount || 0).toFixed(2)));
+  }
+
+  async function saveEdit(g, idVal) {
+    const gid = idVal || idOf(g) || idOf(g?.goal?._id);
+    if (!gid) return;
+    const amt = Number(editVal);
+    if (isNaN(amt) || amt < 0) { alert('Enter a non-negative number'); return; }
+    try {
+      await api('/goals/setAllocation', { method:'POST', body: JSON.stringify({ goalId: gid, allocatedAmount: amt, enforceBalance: false }) });
+      setEditingId(null); setEditVal("");
+      load();
+    } catch (e) {
+      alert('Allocation update failed');
+    }
+  }
+
+  function cancelEdit(){ setEditingId(null); setEditVal(""); }
 
   async function logout() {
     try {
@@ -124,6 +222,9 @@ export default function Goals() {
       </div>
 
       <div className="cards-grid">
+        {accounts.length > 0 && goals.length > 0 && (
+          <TransferBetweenGoals accounts={accounts} goals={goals} onDone={() => { load(); loadAccounts(); }} />
+        )}
         {/* Create Goal */}
         <section className="card goals-card">
           <header className="card__header">
@@ -206,6 +307,11 @@ export default function Goals() {
             </div>
           </form>
         </section>
+        {!accounts.length && (
+          <div className="card" style={{textAlign:'center', marginTop:12}}>
+            You don’t have any accounts yet. Create one in the <a href="/accounts">Accounts</a> tab.
+          </div>
+        )}
 
         {/* B) Monthly spending summary */}
         <section className="card summary-card">
@@ -244,7 +350,7 @@ export default function Goals() {
           ) : (
             <div className="goals-grid">
               {goals.map((g) => {
-                const id = g.id || g.goalId || (typeof g.goal?._id === 'string' ? g.goal._id : g.goal?._id?.$oid) || '';
+                const id = idOf(g) || idOf(g.goal?._id) || g.goalId || '';
                 const isSavings = (g.goal?.type || '').toLowerCase() === 'savings';
                 const title = `${g.goal?.name}${!isSavings && g.goal?.category ? ` (${g.goal.category})` : ''}`;
                 const pct = Math.round(g.percent || 0);
@@ -271,6 +377,28 @@ export default function Goals() {
                     </div>
 
                     <Progress percent={pct} />
+
+                    {/* Allocation editing UI */}
+                    <div style={{ marginTop: 8 }}>
+                      <span className="subtle">Allocated:</span>{' '}
+                      {editingId === id ? (
+                        <>
+                          <input
+                            className="input"
+                            style={{ width: 120 }}
+                            value={editVal}
+                            onChange={e => setEditVal(e.target.value)}
+                          />
+                          <button className="btn btn-primary" style={{marginLeft:6}} onClick={() => saveEdit(g, id)}>Save</button>
+                          <button className="btn btn-ghost" style={{marginLeft:4}} onClick={cancelEdit}>Cancel</button>
+                        </>
+                      ) : (
+                        <>
+                          <strong>${Number(g.allocatedAmount || 0).toFixed(2)}</strong>
+                          <button className="btn btn-ghost" style={{ marginLeft: 8 }} onClick={() => startEdit(g, id)}>Edit</button>
+                        </>
+                      )}
+                    </div>
 
                     <div className="goal-card__actions">
                       {isSavings ? (

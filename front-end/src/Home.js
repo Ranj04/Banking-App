@@ -3,22 +3,24 @@ import Navbar from "./components/Navbar";
 import { useNavigate } from "react-router-dom";
 import './Home.css';
 
+// helper for ids used everywhere
+const idOf = (obj) => (obj?.id) || (obj?._id?.$oid) || (obj?._id) || (typeof obj === 'string' ? obj : '');
+
 export const Home = () => {
-    const userName = (typeof window !== 'undefined' && window.localStorage) ? localStorage.getItem('userName') : null;
+    // userName retained via localStorage if needed later but currently unused
     const [amount, setAmount] = React.useState('');
     const [transactions, setTransactions] = React.useState([]);
-    const [toId, setToId] = React.useState('');
-    const [error, setError] = React.useState('');
+    // Removed legacy transfer state (toId) and error display for legacy path
     const [toast, setToast] = React.useState(null); // { type, text }
     const toastRef = React.useRef();
     const [accounts, setAccounts] = React.useState([]);
     const [selectedAccount, setSelectedAccount] = React.useState('');
+    const [goals, setGoals] = React.useState([]);
+    const [selectedGoalId, setSelectedGoalId] = React.useState('');
 
     const navigate = useNavigate();
 
-    const goToSavingsGoal = () => {
-        navigate("/savings-goal");
-    };
+    // Removed unused goToSavingsGoal helper
 
     function handleAmountChange(event) {
         let newAmount = event.target.value;
@@ -42,20 +44,11 @@ export const Home = () => {
             .catch(e => console.log('getTransactions failed:', e.message || e));
     }
 
+    // goalId alias for clarity if needed in future extensions
+    const goalId = (g) => idOf(g) || idOf(g?.goal?._id) || g?.goalId || '';// eslint-disable-line no-unused-vars
 
-       function handleFinancing() {
-            if(!amount) return;
-            const val = Number(amount);
-            if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
-            const httpSetting = {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount: val }),
-            };
-            apiFetch('/financing', httpSetting)
-                .then(r=>{ if(!r.ok) throw new Error(); showToast('success','Financing successful'); getTransactions(); setAmount(''); })
-                .catch(()=> showToast('error','Financing failed'));
-        }
+
+    // Financing handler removed (feature disabled)
 
     function showToast(type, text){
         if(toastRef.current){ clearTimeout(toastRef.current); }
@@ -63,69 +56,82 @@ export const Home = () => {
         toastRef.current = setTimeout(()=> setToast(null), 3500);
     }
 
-    function handleDeposit() {
-        if(!amount) return;
-        const val = Number(amount);
-        if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
-    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ amount: Number(amount), accountId: selectedAccount || null }) };
-        apiFetch('/createDeposit', httpSetting)
-            .then(r => { if(!r.ok) throw new Error(); showToast('success','Deposit successful'); getTransactions(); setAmount(''); 
-                // refresh accounts balances
-                fetch('/accounts/list', { credentials:'include' }).then(r=>r.json()).then(d=>setAccounts(d?.data||[])).catch(()=>{});
-            })
-            .catch(()=> showToast('error','Deposit failed'));
+    async function refreshAccountsAndGoals(){
+        try {
+            const acc = await fetch('/accounts/list', { credentials:'include' }).then(r=>r.json()).catch(()=>({}));
+            setAccounts(acc?.data || []);
+            const gs = await fetch('/goals/list', { credentials:'include' }).then(r=>r.json()).catch(()=>({}));
+            setGoals(gs?.data || []);
+        } catch {/* ignore */}
     }
 
-    function handleRepay() {
-        if(!amount) return;
+    async function doDeposit() {
+        if(!amount || !selectedAccount) return;
         const val = Number(amount);
         if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
-        const httpSetting = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: val }),
-        };
-        apiFetch('/repay', httpSetting)
-            .then(r=>{ if(!r.ok) throw new Error(); showToast('success','Repay successful'); getTransactions(); setAmount(''); })
-            .catch(()=> showToast('error','Repay failed'));
+        try {
+            const r = await apiFetch('/createDeposit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ amount: val, accountId: selectedAccount, goalId: selectedGoalId || undefined }) });
+            if(!r.ok) throw new Error();
+            setAmount('');
+            await Promise.all([
+                fetch('/accounts/list', { credentials:'include' }).then(r=>r.json()).then(d=>setAccounts(d?.data||[])),
+                fetch('/goals/list', { credentials:'include' }).then(r=>r.json()).then(d=>setGoals(d?.data||[]))
+            ]);
+            getTransactions();
+            showToast('success','Deposit successful');
+        } catch { showToast('error','Deposit failed'); }
     }
 
-    function handleWithdraw() {
-        if(!amount) return;
+    // Repay handler removed (feature disabled)
+
+    async function doWithdraw() {
+        if(!amount || !selectedAccount) return;
         const val = Number(amount);
         if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
-    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ amount: val, accountId: selectedAccount || null }) };
-        apiFetch('/withdraw', httpSetting)
-            .then(r => { if(!r.ok) throw new Error(); showToast('success','Withdraw successful'); getTransactions(); setAmount(''); 
-                fetch('/accounts/list', { credentials:'include' }).then(r=>r.json()).then(d=>setAccounts(d?.data||[])).catch(()=>{});
-            })
-            .catch(()=> showToast('error','Withdrawal failed'));
+        try {
+            const r = await apiFetch('/withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ amount: val, accountId: selectedAccount, goalId: selectedGoalId || undefined }) });
+            if(!r.ok) throw new Error();
+            setAmount('');
+            await Promise.all([
+                fetch('/accounts/list', { credentials:'include' }).then(r=>r.json()).then(d=>setAccounts(d?.data||[])),
+                fetch('/goals/list', { credentials:'include' }).then(r=>r.json()).then(d=>setGoals(d?.data||[]))
+            ]);
+            getTransactions();
+            showToast('success','Withdraw successful');
+        } catch { showToast('error','Withdrawal failed'); }
     }
 
     React.useEffect(() => {
         getTransactions(); // calls /getTransactions
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // initial loads (separate calls as requested)
     React.useEffect(() => {
-        fetch('/accounts/list', { credentials: 'include' })
-            .then(r => r.json())
-            .then(d => {
-                const list = d?.data || [];
-                setAccounts(list);
-                if (!selectedAccount && list.length) setSelectedAccount(list[0].id);
-            })
-            .catch(() => {});
+        fetch('/accounts/list', { credentials:'include' })
+            .then(r=>r.json())
+            .then(d=>{ const list = d?.data || []; setAccounts(list); if(!selectedAccount && list.length) setSelectedAccount(idOf(list[0])); })
+            .catch(()=>{});
+        fetch('/goals/list', { credentials:'include' })
+            .then(r=>r.json())
+            .then(d=> setGoals(d?.data||[]))
+            .catch(()=>{});
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Generic transfer API helper (simplified abstraction)
-    async function doTransfer(fromAccountId, toAccountId, amount){
+    const goalsForAccount = goals.filter(g => idOf(g.accountId) === selectedAccount);
+
+    // Generic transfer helper accepting payload with optional goal ids
+    async function doTransfer(payload){
+        if(!payload || typeof payload !== 'object') return;
+        const { fromAccountId, toAccountId, amount, fromGoalId, toGoalId } = payload;
         if(!fromAccountId || !toAccountId || !amount || Number(amount) <= 0) return;
         try {
             await fetch('/accounts/transfer', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type':'application/json' },
-                body: JSON.stringify({ fromAccountId, toAccountId, amount: Number(amount) })
+                body: JSON.stringify({ fromAccountId, toAccountId, amount: Number(amount), fromGoalId, toGoalId })
             });
             // refresh balances + activity
             fetch('/accounts/list', { credentials:'include' })
@@ -138,62 +144,55 @@ export const Home = () => {
     }
 
     // Minimal inline widget if not using a separate component file
-    function TransferWidget({ accounts, onTransfer }) {
-        const [from, setFrom] = React.useState(accounts[0]?.id || '');
-        const [to, setTo] = React.useState('');
-        const [amt, setAmt] = React.useState('');
+        function TransferWidget({ accounts, goals, onTransfer }) {
+            const firstId = accounts.length ? idOf(accounts[0]) : '';
+            const [from, setFrom] = React.useState(firstId);
+            const [to, setTo] = React.useState('');
+            const [amt, setAmt] = React.useState('');
+            const [fromGoalId, setFromGoalId] = React.useState('');
+            const [toGoalId, setToGoalId] = React.useState('');
 
-        React.useEffect(() => {
-            if (accounts.length && !from) setFrom(accounts[0].id);
-        }, [accounts, from]);
+            React.useEffect(() => {
+                if (accounts.length && !from) setFrom(idOf(accounts[0]));
+            }, [accounts, from]);
 
-        return (
-            <>
-                <div className="row" style={{gap:8, flexWrap:'wrap'}}>
-                    <select className="input" value={from} onChange={e=>setFrom(e.target.value)}>
-                        {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.type})</option>)}
-                    </select>
-                    <select className="input" value={to} onChange={e=>setTo(e.target.value)}>
-                        <option value="">To…</option>
-                        {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.type})</option>)}
-                    </select>
-                    <input className="input" type="number" step="0.01" placeholder="Amount" value={amt} onChange={e=>setAmt(e.target.value)} />
-                </div>
-                <div className="row" style={{marginTop:8}}>
-                    <button className="button ghost" disabled={!from || !to || !amt} onClick={()=> onTransfer(from, to, amt)}>Transfer</button>
-                </div>
-            </>
-        );
-    }
+            const fromGoals = React.useMemo(() => goals.filter(g => idOf(g.accountId) === from), [goals, from]);
+            const toGoals = React.useMemo(() => goals.filter(g => idOf(g.accountId) === to), [goals, to]);
 
-    function logOut() {
-        document.cookie = '';
-        navigate('/');
-    }
+            return (
+                <>
+                    <div className="row" style={{gap:8, flexWrap:'wrap', marginBottom:8}}>
+                        <select className="input" value={from} onChange={e=>{ setFrom(e.target.value); setFromGoalId(''); }}>
+                            {accounts.map(a => {
+                                const aid = idOf(a); return <option key={aid} value={aid}>{a.name} ({a.type})</option>;
+                            })}
+                        </select>
+                        <select className="input" value={fromGoalId} onChange={e=>setFromGoalId(e.target.value)}>
+                            <option value="">From goal (optional)</option>
+                            {fromGoals.map(g => { const gid = idOf(g); return <option key={gid} value={gid}>{g.goal?.name || g.name}</option>; })}
+                        </select>
+                    </div>
+                    <div className="row" style={{gap:8, flexWrap:'wrap', marginBottom:8}}>
+                        <select className="input" value={to} onChange={e=>{ setTo(e.target.value); setToGoalId(''); }}>
+                            <option value="">To account…</option>
+                            {accounts.map(a => { const aid = idOf(a); return <option key={aid} value={aid}>{a.name} ({a.type})</option>; })}
+                        </select>
+                        <select className="input" value={toGoalId} onChange={e=>setToGoalId(e.target.value)}>
+                            <option value="">To goal (optional)</option>
+                            {toGoals.map(g => { const gid = idOf(g); return <option key={gid} value={gid}>{g.goal?.name || g.name}</option>; })}
+                        </select>
+                        <input className="input" type="number" step="0.01" placeholder="Amount" value={amt} onChange={e=>setAmt(e.target.value)} />
+                    </div>
+                    <div className="row">
+                        <button className="button ghost" disabled={!from || !to || !amt} onClick={() => onTransfer({ fromAccountId: from, toAccountId: to, amount: Number(amt), fromGoalId: fromGoalId || undefined, toGoalId: toGoalId || undefined })}>Transfer</button>
+                    </div>
+                </>
+            );
+        }
 
-    function handleTransfer() {
-        if(!amount || !toId) return;
-        const val = Number(amount);
-        if(isNaN(val) || val <= 0){ setError('Enter a valid amount'); return; }
-        const httpSetting = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: val, toId }),
-        };
-        setError('');
-        apiFetch('/transfer', httpSetting)
-            .then(res => res.json())
-            .then(apiResult => {
-                if(apiResult.status){
-                    getTransactions();
-                    setAmount('');
-                    setToId('');
-                } else {
-                    setError(apiResult.message || 'Transfer failed');
-                }
-            })
-            .catch(()=> setError('Transfer failed'));
-    }
+    // Legacy logout removed (Navbar handles logout)
+
+    // Legacy transfer handler removed (superseded by doTransfer)
 
     function formatTimestamp(ts){
         if(!ts) return '';
@@ -201,8 +200,8 @@ export const Home = () => {
     }
 
     // Create alias functions to match new JSX naming (deposit/withdraw etc.)
-    const deposit = handleDeposit;
-    const withdraw = handleWithdraw;
+    const deposit = doDeposit; // alias for JSX
+    const withdraw = doWithdraw;
     // financing & repay intentionally disabled in new UI but keep references
     const totalBalance = React.useMemo(
         () => accounts.reduce((s,a)=> s + Number(a.balance || 0), 0),
@@ -214,7 +213,7 @@ export const Home = () => {
     // Map accountId -> display name for quick lookup in activity table
     const accountNameById = React.useMemo(() => {
         const m = {};
-        accounts.forEach(a => { m[a.id] = `${a.name} (${a.type})`; });
+        accounts.forEach(a => { m[idOf(a)] = `${a.name} (${a.type})`; });
         return m;
     }, [accounts]);
 
@@ -247,14 +246,22 @@ export const Home = () => {
                                             <select
                                                 className="input"
                                                 value={selectedAccount}
-                                                onChange={e=>setSelectedAccount(e.target.value)}
+                                                onChange={e=>{ setSelectedAccount(e.target.value); setSelectedGoalId(''); }}
                                             >
                                                 {accounts.map(a => (
-                                                    <option key={a.id} value={a.id}>
+                                                    <option key={a.id} value={a.id} >
                                                         {a.name} ({a.type}) — ${Number(a.balance || 0).toFixed(2)}
                                                     </option>
                                                 ))}
                                             </select>
+                                            <div style={{marginTop:8}}>
+                                                <select className="input" value={selectedGoalId} onChange={e=> setSelectedGoalId(e.target.value)}>
+                                                    <option value="">— No specific goal —</option>
+                                                    {goalsForAccount.map(g => {
+                                                        const gid = idOf(g); return <option key={gid} value={gid}>{g.goal?.name || g.name}</option>;
+                                                    })}
+                                                </select>
+                                            </div>
                                         </div>
                                     )}
                                     <div className="toolbar" style={{marginTop:6}}>
@@ -274,7 +281,7 @@ export const Home = () => {
                                 <div className="card transfer-card">
                                     <h2 className="section-title">Transfer</h2>
                                     {accounts.length ? (
-                                        <TransferWidget accounts={accounts} onTransfer={doTransfer} />
+                                        <TransferWidget accounts={accounts} goals={goals} onTransfer={doTransfer} />
                                     ) : (
                                         <p className="helper">Create at least two accounts to transfer funds.</p>
                                     )}
@@ -296,7 +303,7 @@ export const Home = () => {
                                                         <tr key={i}>
                                                             <td><span className="tag">{t.transactionType}</span></td>
                                                             <td>${Number(t.amount).toFixed(2)}</td>
-                                                            <td>{accountNameById[t.accountId] || '—'}</td>
+                                                            <td>{accountNameById[idOf(t.accountId) || t.accountId] || '—'}</td>
                                                             <td>{formatTimestamp(t.timestamp)}</td>
                                                         </tr>
                                                     ))
@@ -310,7 +317,7 @@ export const Home = () => {
                                             </tbody>
                                         </table>
                                     </div>
-                                    {error && <div className="alert error" style={{marginTop:8}}>{error}</div>}
+                                    {/* Removed legacy error state display (error var no longer defined) */}
                                 </div>
                             </div>
                         </div>

@@ -70,6 +70,40 @@
   }
 }
 
+/* spacing */
+.accounts-create { width: min(760px, 100%); margin: 8px auto 32px; border-radius:16px; padding:20px; }
+.accounts-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:16px; margin-top: 8px; }
+.empty-card { width:min(680px,100%); margin:28px auto 0; text-align:center; }
+
+/* stacked bar */
+.bar-wrap { margin-top: 12px; }
+.bar-track {
+  height: 16px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  display: flex;
+}
+.bar-seg { height: 100%; }
+.bar-unallocated { background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.08)); }
+
+.bar-legend {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  border: 1px solid rgba(255,255,255,0.3);
+}
+.legend-dot--unalloc { background: rgba(255,255,255,0.25); }
+
 /* --- Dark themed select --- */
 .select-wrap {
   position: relative;
@@ -140,3 +174,61 @@
   color: #e9f0f6;
 }
 .btn-ghost:hover { background: rgba(255,255,255,0.08); }
+
+/* --- Appended styles (request) --- */
+/* spacing & layout */
+.accounts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 8px; }
+.acct-actions { margin-top: 10px; display: flex; gap: 8px; }
+
+/* stacked bar */
+.bar-wrap { margin-top: 12px; }
+.bar-track {
+  height: 16px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  display: flex;
+}
+.bar-seg { height: 100%; position: relative; }
+.bar-unallocated { background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.08)); }
+
+/* pretty tooltip using CSS only */
+.bar-seg:hover::after {
+  content: attr(data-label);
+  position: absolute;
+  left: 50%; top: -36px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: rgba(14, 35, 48, 0.95);
+  color: #e9f0f6;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 6px 14px rgba(0,0,0,.25);
+}
+.bar-seg:hover::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: -8px;
+  transform: translateX(-50%);
+  width: 10px; height: 10px;
+  background: rgba(14, 35, 48, 0.95);
+  border-left: 1px solid rgba(255,255,255,0.12);
+  border-top: 1px solid rgba(255,255,255,0.12);
+  rotate: 45deg;
+}
+
+/* legend */
+.bar-legend { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 0.9rem; opacity: 0.9; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.30); }
+.legend-dot--unalloc { background: rgba(255,255,255,0.28); }
+
+/* inline fund goal widget */
+.acct-fund-goal { margin-top: 10px; }
+.fund-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.fund-row select, .fund-row input { min-width:160px; }

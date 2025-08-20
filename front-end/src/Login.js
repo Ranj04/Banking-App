@@ -1,19 +1,11 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "./App.css";
-
-// Helper to safely format timestamps (not currently used here but available for future use)
-function formatTimestamp(ts) {
-  try { return new Date(ts).toLocaleString(); }
-  catch { return ts ?? ""; }
-}
 
 export default function Login() {
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [msg, setMsg] = useState({ type: "", text: "" });
-  const navigate = useNavigate();
 
   async function post(path, payload, opts = {}) {
     setPending(true);
