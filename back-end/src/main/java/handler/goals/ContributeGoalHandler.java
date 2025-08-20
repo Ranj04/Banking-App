@@ -68,6 +68,10 @@ public class ContributeGoalHandler implements BaseHandler {
         c.dateMillis = System.currentTimeMillis();
         goal.contributions.add(c);
 
+        // bump allocatedAmount
+        if (goal.allocatedAmount == null) goal.allocatedAmount = 0.0;
+        goal.allocatedAmount += amountVal;
+
         // persist using existing replace helper (goal.id field)
         dao.replace(goal.id, goal);
 

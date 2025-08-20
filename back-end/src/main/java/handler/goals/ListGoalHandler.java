@@ -46,22 +46,13 @@ public class ListGoalHandler implements BaseHandler {
             GoalView v = new GoalView();
             v.id = g.getUniqueId();
             v.goal = g;
-            // Initialize account fields
             v.accountId = (g.accountId == null) ? null : g.accountId.toHexString();
-            v.accountName = null;
-            v.accountType = null;
-            if (g.accountId != null) {
-                var acc = dao.AccountDao.getInstance().query(
-                        new org.bson.Document("_id", g.accountId)
-                ).stream().findFirst().orElse(null);
-                if (acc != null) {
-                    v.accountName = acc.name;
-                    v.accountType = acc.type;
-                }
-            } else {
-                // Optional legacy label
-                v.accountName = "Unassigned";
-            }
+            var acc = (g.accountId == null) ? null : dao.AccountDao.getInstance().query(
+                    new org.bson.Document("_id", g.accountId)
+            ).stream().findFirst().orElse(null);
+            v.accountName = (acc != null) ? acc.name : "Unassigned";
+            v.accountType = (acc != null) ? acc.type : null;
+
             if ("savings".equalsIgnoreCase(g.type)) {
                 double sum = g.contributions == null ? 0.0 :
                         g.contributions.stream().mapToDouble(c -> c.amount == null ? 0.0 : c.amount).sum();
