@@ -11,6 +11,8 @@ export const Home = () => {
     const [error, setError] = React.useState('');
     const [toast, setToast] = React.useState(null); // { type, text }
     const toastRef = React.useRef();
+    const [accounts, setAccounts] = React.useState([]);
+    const [selectedAccount, setSelectedAccount] = React.useState('');
 
     const navigate = useNavigate();
 
@@ -65,9 +67,12 @@ export const Home = () => {
         if(!amount) return;
         const val = Number(amount);
         if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
-    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ amount: Number(amount) }) };
+    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ amount: Number(amount), accountId: selectedAccount || null }) };
         apiFetch('/createDeposit', httpSetting)
-            .then(r => { if(!r.ok) throw new Error(); showToast('success','Deposit successful'); getTransactions(); setAmount(''); })
+            .then(r => { if(!r.ok) throw new Error(); showToast('success','Deposit successful'); getTransactions(); setAmount(''); 
+                // refresh accounts balances
+                fetch('/accounts/list', { credentials:'include' }).then(r=>r.json()).then(d=>setAccounts(d?.data||[])).catch(()=>{});
+            })
             .catch(()=> showToast('error','Deposit failed'));
     }
 
@@ -89,15 +94,77 @@ export const Home = () => {
         if(!amount) return;
         const val = Number(amount);
         if(isNaN(val) || val <= 0){ showToast('error','Enter a valid amount'); return; }
-    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ amount: val }) };
+    const httpSetting = { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ amount: val, accountId: selectedAccount || null }) };
         apiFetch('/withdraw', httpSetting)
-            .then(r => { if(!r.ok) throw new Error(); showToast('success','Withdrawal successful'); getTransactions(); setAmount(''); })
+            .then(r => { if(!r.ok) throw new Error(); showToast('success','Withdraw successful'); getTransactions(); setAmount(''); 
+                fetch('/accounts/list', { credentials:'include' }).then(r=>r.json()).then(d=>setAccounts(d?.data||[])).catch(()=>{});
+            })
             .catch(()=> showToast('error','Withdrawal failed'));
     }
 
     React.useEffect(() => {
         getTransactions(); // calls /getTransactions
     }, []);
+
+    React.useEffect(() => {
+        fetch('/accounts/list', { credentials: 'include' })
+            .then(r => r.json())
+            .then(d => {
+                const list = d?.data || [];
+                setAccounts(list);
+                if (!selectedAccount && list.length) setSelectedAccount(list[0].id);
+            })
+            .catch(() => {});
+    }, []);
+
+    // Generic transfer API helper (simplified abstraction)
+    async function doTransfer(fromAccountId, toAccountId, amount){
+        if(!fromAccountId || !toAccountId || !amount || Number(amount) <= 0) return;
+        try {
+            await fetch('/accounts/transfer', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type':'application/json' },
+                body: JSON.stringify({ fromAccountId, toAccountId, amount: Number(amount) })
+            });
+            // refresh balances + activity
+            fetch('/accounts/list', { credentials:'include' })
+                .then(r=>r.json()).then(d=>setAccounts(d?.data||[])).catch(()=>{});
+            getTransactions();
+            showToast('success','Transfer complete');
+        } catch {
+            showToast('error','Transfer failed');
+        }
+    }
+
+    // Minimal inline widget if not using a separate component file
+    function TransferWidget({ accounts, onTransfer }) {
+        const [from, setFrom] = React.useState(accounts[0]?.id || '');
+        const [to, setTo] = React.useState('');
+        const [amt, setAmt] = React.useState('');
+
+        React.useEffect(() => {
+            if (accounts.length && !from) setFrom(accounts[0].id);
+        }, [accounts, from]);
+
+        return (
+            <>
+                <div className="row" style={{gap:8, flexWrap:'wrap'}}>
+                    <select className="input" value={from} onChange={e=>setFrom(e.target.value)}>
+                        {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.type})</option>)}
+                    </select>
+                    <select className="input" value={to} onChange={e=>setTo(e.target.value)}>
+                        <option value="">To…</option>
+                        {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.type})</option>)}
+                    </select>
+                    <input className="input" type="number" step="0.01" placeholder="Amount" value={amt} onChange={e=>setAmt(e.target.value)} />
+                </div>
+                <div className="row" style={{marginTop:8}}>
+                    <button className="button ghost" disabled={!from || !to || !amt} onClick={()=> onTransfer(from, to, amt)}>Transfer</button>
+                </div>
+            </>
+        );
+    }
 
     function logOut() {
         document.cookie = '';
@@ -137,18 +204,19 @@ export const Home = () => {
     const deposit = handleDeposit;
     const withdraw = handleWithdraw;
     // financing & repay intentionally disabled in new UI but keep references
-    const balance = React.useMemo(()=>{
-        if(!Array.isArray(transactions)) return 0;
-        return transactions.reduce((sum,t)=>{
-            const amt = Number(t.amount)||0;
-            const type = (t.transactionType||'').toLowerCase();
-            if(['deposit','financing','credit'].includes(type)) return sum + amt;
-            if(['withdraw','repay','debit'].includes(type)) return sum - amt;
-            return sum;
-        },0);
-    },[transactions]);
-    const balanceDisplay = `$${balance.toFixed(2)}`;
+    const totalBalance = React.useMemo(
+        () => accounts.reduce((s,a)=> s + Number(a.balance || 0), 0),
+        [accounts]
+    );
+    const balanceDisplay = `$${totalBalance.toFixed(2)}`;
     const balanceFormatted = balanceDisplay; // alias for new JSX snippet naming
+
+    // Map accountId -> display name for quick lookup in activity table
+    const accountNameById = React.useMemo(() => {
+        const m = {};
+        accounts.forEach(a => { m[a.id] = `${a.name} (${a.type})`; });
+        return m;
+    }, [accounts]);
 
             return (
                 <>
@@ -174,6 +242,21 @@ export const Home = () => {
                                             placeholder="0.00"
                                         />
                                     </div>
+                                    {accounts.length > 0 && (
+                                        <div style={{marginBottom:12}}>
+                                            <select
+                                                className="input"
+                                                value={selectedAccount}
+                                                onChange={e=>setSelectedAccount(e.target.value)}
+                                            >
+                                                {accounts.map(a => (
+                                                    <option key={a.id} value={a.id}>
+                                                        {a.name} ({a.type}) — ${Number(a.balance || 0).toFixed(2)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
                                     <div className="toolbar" style={{marginTop:6}}>
                                         <button className="button" onClick={deposit} disabled={!amount}>Deposit</button>
                                         <button className="button ghost" onClick={withdraw} disabled={!amount}>Withdraw</button>
@@ -190,12 +273,11 @@ export const Home = () => {
                                 {/* Card B — Transfer */}
                                 <div className="card transfer-card">
                                     <h2 className="section-title">Transfer</h2>
-                                    <div className="stack" style={{gap:10}}>
-                                        <input className="input" placeholder="From account" disabled />
-                                        <input className="input" placeholder="To account" disabled />
-                                        <button className="button ghost" disabled>Transfer</button>
-                                        <p className="helper">Transfer is coming soon.</p>
-                                    </div>
+                                    {accounts.length ? (
+                                        <TransferWidget accounts={accounts} onTransfer={doTransfer} />
+                                    ) : (
+                                        <p className="helper">Create at least two accounts to transfer funds.</p>
+                                    )}
                                 </div>
 
                                 {/* Card C — Recent activity */}
@@ -205,21 +287,22 @@ export const Home = () => {
                                         <table className="table">
                                             <thead>
                                                 <tr>
-                                                    <th>Amount</th><th>Type</th><th>Time</th>
+                                                    <th>Type</th><th>Amount</th><th>Account</th><th>When</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {Array.isArray(transactions) && transactions.length > 0 ? (
                                                     transactions.map((t,i)=>(
                                                         <tr key={i}>
-                                                            <td>${Number(t.amount).toFixed(2)}</td>
                                                             <td><span className="tag">{t.transactionType}</span></td>
+                                                            <td>${Number(t.amount).toFixed(2)}</td>
+                                                            <td>{accountNameById[t.accountId] || '—'}</td>
                                                             <td>{formatTimestamp(t.timestamp)}</td>
                                                         </tr>
                                                     ))
                                                 ) : (
                                                     <tr>
-                                                        <td colSpan="3" style={{ textAlign:'center', color:'var(--muted)' }}>
+                                                        <td colSpan="4" style={{ textAlign:'center', color:'var(--muted)' }}>
                                                             No transactions yet
                                                         </td>
                                                     </tr>
