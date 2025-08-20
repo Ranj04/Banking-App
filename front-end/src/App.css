@@ -241,7 +241,9 @@ body { background: radial-gradient(1200px 600px at 50% 0, var(--bg-start), var(-
 
 /* Generic layout tokens */
 .page { padding: 24px; }
-.card { background: rgba(255,255,255,0.04); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+.card { background: rgba(255,255,255,0.04); border-radius: 16px; padding: 20px; margin: 32px 0 0; box-shadow: 0 10px 30px rgba(0,0,0,.22); }
+/* ensure first card has top margin but page padding still respected */
+.page > .card:first-of-type { margin-top: 24px; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .card__title { display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; }
@@ -302,6 +304,11 @@ select option { background: #0d2538; color:#e6eefc; }
 .flash { position:fixed; bottom:16px; right:16px; background:#0d2538; border:1px solid rgba(255,255,255,.15); padding:12px 16px; border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.35); font-size:.85rem; animation:fadeIn .25s ease; }
 .flash.success { border-color:rgba(16,185,129,.4); color:#d1fae5; }
 .flash.error { border-color:rgba(239,68,68,.5); color:#fee2e2; }
+/* New unified toast (used by QuickActions) */
+.toast { position:fixed; bottom:20px; right:20px; padding:12px 16px; border-radius:14px; font-size:.8rem; box-shadow:0 6px 28px -4px rgba(0,0,0,.5); backdrop-filter:blur(6px); background:linear-gradient(145deg, rgba(13,37,56,.92), rgba(13,37,56,.78)); border:1px solid rgba(255,255,255,.12); animation:fadeIn .25s ease; }
+.toast.success { border-color:rgba(16,185,129,.5); color:#bfffe0; }
+.toast.error { border-color:rgba(239,68,68,.55); color:#ffd6d6; }
+.toast:before { content:''; position:absolute; inset:0; border-radius:inherit; box-shadow:0 0 0 1px rgba(255,255,255,.05), 0 0 14px -4px rgba(255,255,255,.15) inset; pointer-events:none; }
 @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0);} }
 /* Header & Navigation */
 .app-header { display:flex; align-items:center; justify-content:space-between; padding:.75rem 1rem; background:#0d2538; color:#fff; border-radius:12px; margin-bottom:1.25rem; box-shadow:0 2px 4px rgba(0,0,0,.25); }

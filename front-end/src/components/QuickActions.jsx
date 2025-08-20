@@ -2,31 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 
 // tiny toast system (no deps)
 function Toast({ kind = "success", text, onClose }) {
-  useEffect(() => {
-    const id = setTimeout(onClose, 2600);
-    return () => clearTimeout(id);
-  }, [onClose]);
-  return (
-    <div
-      style={{
-        position: "fixed",
-        right: 16,
-        bottom: 16,
-        padding: "12px 14px",
-        borderRadius: 12,
-        boxShadow: "0 6px 24px rgba(0,0,0,0.35)",
-        background: kind === "error" ? "#2b1b1b" : "#1c2b20",
-        color: kind === "error" ? "#ffb3b3" : "#b8ffcb",
-        zIndex: 9999,
-        fontSize: 14,
-        maxWidth: 380,
-      }}
-      role="status"
-      aria-live="polite"
-    >
-      {text}
-    </div>
-  );
+  useEffect(() => { const id = setTimeout(onClose, 2600); return () => clearTimeout(id); }, [onClose]);
+  return <div className={`toast ${kind}`}>{text}</div>;
 }
 
 // normalize Mongo IDs & numbers
@@ -244,7 +221,7 @@ export default function QuickActions({ onAnyChange }) {
 
   // UI
   return (
-    <div className="qa-card" style={{ background: "rgba(255,255,255,0.03)", borderRadius: 16, padding: 16 }}>
+    <div className="card qa-card" style={{ marginTop: 24 }}>
       <h3 style={{ marginBottom: 12 }}>Quick Actions</h3>
 
       {/* Account select */}

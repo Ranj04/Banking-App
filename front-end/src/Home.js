@@ -5,78 +5,79 @@ import { listGoals } from './api/goalsApi';
 
 export default function Home() {
     const username = useUsername();
+    const [accounts, setAccounts] = React.useState([]);
+    const [goals, setGoals] = React.useState([]);
+    const [txns, setTxns] = React.useState([]);
 
-    const [accounts, setAccounts] = React.useState([]); // only for header stats / future
-    const [goals, setGoals] = React.useState([]); // not directly used after QuickActions; kept for possible summary
-    const [txns, setTxns] = React.useState([]); // recent activity list
     React.useEffect(() => { reload(); }, []);
 
     async function loadRecent() {
-        const candidates = ['/getTransactions', '/transactions', '/transactions/list'];
-        let data = [];
+        const candidates = ['/transactions', '/transactions/list', '/getTransactions'];
         for (const url of candidates) {
             try {
                 const r = await fetch(url, { credentials: 'include' });
                 if (!r.ok) continue;
                 const j = await r.json();
-                data = j?.data || j?.transactions || j || [];
-                if (Array.isArray(data)) break;
-            } catch {}
+                const raw = j?.data || j?.transactions || j || [];
+                if (!Array.isArray(raw)) continue;
+
+                const normalized = raw.map(t => {
+                    // numeric amount
+                    const cents = t.amountCents ?? t.valueCents ?? null;
+                    let rawAmt = t.amount ?? t.value ?? (cents != null ? cents / 100 : null);
+                    if (rawAmt == null && typeof t.amountStr === 'string') {
+                        const n = Number(t.amountStr.replace(/[$,]/g, '')); if (!Number.isNaN(n)) rawAmt = n;
+                    }
+                    if (rawAmt == null) rawAmt = 0;
+                    const type = (t.type || t.transactionType || '').toLowerCase();
+
+                    // prefer enriched names from backend
+                    const displayAccount = t.displayAccount || t.accountName || t.account?.name || t.account || '';
+                    const displayGoal = t.displayGoal || t.goalName || t.goal?.name || t.goal || '';
+
+                    // withdraw should display negative
+                    const signed = type === 'withdraw' ? -Math.abs(Number(rawAmt || 0)) : Number(rawAmt || 0);
+
+                    return {
+                        id: t.id || t._id?.$oid || t._id || crypto.randomUUID(),
+                        type: type || (signed >= 0 ? 'deposit' : 'withdraw'),
+                        amount: signed,
+                        accountName: displayAccount,
+                        goalName: displayGoal,
+                        createdAt: Number(t.createdAt ?? t.timestamp ?? Date.parse(t.date) ?? Date.now()),
+                    };
+                });
+
+                normalized.sort((a, b) => b.createdAt - a.createdAt);
+                setTxns(normalized.slice(0, 5));
+                return;
+            } catch { /* try next */ }
         }
-        const norm = (data || []).map(t => {
-            const cents = t.amountCents ?? t.valueCents ?? null;
-            let raw = t.amount ?? t.value ?? t.delta ?? t.change ?? (cents != null ? cents / 100 : null);
-            if (raw == null) raw = t.depositAmount ?? (t.withdrawAmount != null ? -Math.abs(t.withdrawAmount) : null);
-            if (raw == null && typeof t.amountStr === 'string') {
-                const m = t.amountStr.replace(/[$,]/g,'');
-                const n = Number(m); if (!Number.isNaN(n)) raw = n;
-            }
-            if (raw == null) raw = 0;
-            const amt = Number(raw);
-            return {
-                id: t.id || t._id?.$oid || t._id || Math.random().toString(36).slice(2),
-                type: t.type || t.transactionType || t.action || (amt >= 0 ? 'credit' : 'debit'),
-                amount: amt,
-                accountName: t.accountName || t.account?.name || t.account || '',
-                goalName: t.goalName || t.goal?.name || t.goal || '',
-                createdAt: Number(t.createdAt ?? t.timestamp ?? Date.parse(t.date) ?? Date.now()),
-            };
-        });
-        norm.sort((a,b) => b.createdAt - a.createdAt);
-        setTxns(norm.slice(0,5));
+        setTxns([]);
     }
 
     async function reload() {
-        const accRes = await fetch('/accounts/list', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
-        setAccounts(accRes?.data || []);
-        const gls = await listGoals();
-        setGoals(gls);
+        try {
+            const accRes = await fetch('/accounts/list', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
+            setAccounts(accRes?.data || []);
+        } catch {}
+        try {
+            const gls = await listGoals();
+            setGoals(gls);
+        } catch {}
         await loadRecent();
-    }
-
-    function connectBank() {
-        // Placeholder; wire to Plaid Link later
-        alert('Bank linking coming soon (Plaid Link placeholder).');
     }
 
     return (
         <>
             <Header />
             <div className="page">
-                <h1>Welcome{username ? `, ${username}` : ''}!</h1>
+                <h1>Welcome, {username || 'Friend'}!</h1>
 
-                <QuickActions onAnyChange={loadRecent} />
-
-                {/* Transfer feature removed for now; handled separately if reintroduced */}
-
-                {/* CONNECT BANK (stub) */}
                 <div className="card">
-                    <h3>Link your bank</h3>
-                    <p className="muted">Connect your real bank to pull balances (Plaid Link placeholder).</p>
-                    <button className="btn" onClick={connectBank}>Connect bank</button>
+                    <QuickActions onAnyChange={loadRecent} />
                 </div>
 
-                {/* RECENT ACTIVITY */}
                 <div className="card">
                     <h3>Recent activity</h3>
                     {txns.length === 0 ? (
@@ -85,31 +86,26 @@ export default function Home() {
                         <table className="txn-table">
                             <thead>
                                 <tr>
-                                    <th>Amount</th>
-                                    <th>Type</th>
-                                    <th>Account</th>
-                                    <th>Goal</th>
-                                    <th>Time</th>
+                                    <th>Amount</th><th>Type</th><th>Account</th><th>Goal</th><th>Time</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                    {txns.map(t => {
-                                    const signed = (t.type === 'withdraw' || t.type === 'debit') ? -Math.abs(Number(t.amount || 0)) : Math.abs(Number(t.amount || 0));
-                                    const amtClass = signed > 0 ? 'amt-pos' : (signed < 0 ? 'amt-neg' : '');
+                                {txns.map(t => {
+                                    const amtClass = t.amount > 0 ? 'amt-pos' : (t.amount < 0 ? 'amt-neg' : '');
                                     return (
-                                    <tr key={t.id}>
-                                        <td className={amtClass}>{signed >= 0 ? '+' : '-'}${Math.abs(signed).toFixed(2)}</td>
-                                        <td>{t.type}</td>
-                                        <td>{t.accountName}</td>
-                                        <td>{t.goalName}</td>
-                                        <td>{new Date(t.createdAt).toLocaleString()}</td>
-                                    </tr>
-                                                                );})}
+                                        <tr key={t.id}>
+                                            <td className={amtClass}>{t.amount >= 0 ? '+' : '-'}${Math.abs(t.amount).toFixed(2)}</td>
+                                            <td>{t.type}</td>
+                                            <td>{t.accountName}</td>
+                                            <td>{t.goalName}</td>
+                                            <td>{new Date(t.createdAt).toLocaleString()}</td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     )}
                 </div>
-                {/* QuickActions handles its own toasts; legacy flash removed */}
             </div>
         </>
     );
