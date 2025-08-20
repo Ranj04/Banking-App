@@ -1,8 +1,17 @@
 package handler;
 
+import dao.AccountDao;
+import dao.GoalDao;
+import dao.TransactionDao;
+import dto.TransactionDto;
+import dto.TransactionType;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 import request.ParsedRequest;
 import response.HttpResponseBuilder;
 import response.RestApiAppResponse;
+
+import java.time.Instant;
 
 public class WithdrawHandler implements BaseHandler {
 
@@ -12,81 +21,66 @@ public class WithdrawHandler implements BaseHandler {
         if (!auth.isLoggedIn) return new HttpResponseBuilder().setStatus(StatusCodes.UNAUTHORIZED);
 
         var json = GsonTool.GSON.fromJson(request.getBody(), com.google.gson.JsonObject.class);
-        if (json == null || !json.has("amount")) return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST);
-        double amount = json.get("amount").getAsDouble();
-        if (amount <= 0) return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST);
+        if (json == null) return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST);
 
-        String accountId = json.has("accountId") && !json.get("accountId").isJsonNull()
-                ? json.get("accountId").getAsString() : null;
-        String goalId = json.has("goalId") && !json.get("goalId").isJsonNull()
-                ? json.get("goalId").getAsString() : null;
+        if (!json.has("accountId") || !json.has("goalId") || !json.has("amount")) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
+                    .setBody(new RestApiAppResponse<>(false, null, "accountId, goalId, amount are required"));
+        }
 
-        // Replaced account-aware branch
-        if (accountId != null && !accountId.isBlank()) {
-            var acc = dao.AccountDao.getInstance()
-                .query(new org.bson.Document("_id", new org.bson.types.ObjectId(accountId))
-                       .append("userName", auth.userName))
+        String accountId = asId(json.get("accountId"));
+        String goalId    = asId(json.get("goalId"));
+        double amount    = json.get("amount").getAsDouble();
+        if (amount <= 0) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
+                    .setBody(new RestApiAppResponse<>(false, null, "amount must be > 0"));
+        }
+
+        var acc = AccountDao.getInstance()
+                .query(new Document("_id", new ObjectId(accountId)).append("userName", auth.userName))
                 .stream().findFirst().orElse(null);
-            if (acc == null) return new HttpResponseBuilder().setStatus(StatusCodes.NOT_FOUND)
-                .setBody(new response.RestApiAppResponse<>(false, null, "Account not found"));
-
-            double amt = json.get("amount").getAsDouble();
-            if (amt <= 0) return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST);
-
-            double bal = acc.balance == null ? 0.0 : acc.balance;
-            if (bal < amt) return new HttpResponseBuilder().setStatus("400 Bad Request")
-                .setBody(new response.RestApiAppResponse<>(false, null, "Insufficient funds"));
-
-            acc.balance = bal - amt;
-            dao.AccountDao.getInstance().replace(new org.bson.types.ObjectId(acc.getUniqueId()), acc);
-
-            if (goalId != null && !goalId.isBlank()) {
-                var gid  = new org.bson.types.ObjectId(goalId);
-                var goal = dao.GoalDaoExt.byIdForUser(gid, auth.userName);
-                if (goal == null) return new HttpResponseBuilder().setStatus(StatusCodes.NOT_FOUND)
-                    .setBody(new response.RestApiAppResponse<>(false, null, "Goal not found"));
-
-                String goalAcc = (goal.accountId == null) ? null : goal.accountId.toHexString();
-                if (!accountId.equals(goalAcc)) return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
-                    .setBody(new response.RestApiAppResponse<>(false, null, "Goal does not belong to account"));
-
-                double alloc = goal.allocatedAmount == null ? 0.0 : goal.allocatedAmount;
-                if (alloc < amt) return new HttpResponseBuilder().setStatus("400 Bad Request")
-                    .setBody(new response.RestApiAppResponse<>(false, null, "Insufficient goal allocation"));
-
-                goal.allocatedAmount = alloc - amt;
-                // persist using GoalDao replace (GoalDto has 'id')
-                if (goal.id != null) dao.GoalDao.getInstance().replace(goal.id, goal);
-            }
-
-            var txn = new dto.TransactionDto();
-            txn.setUserId(auth.userName);
-            txn.setTransactionType(dto.TransactionType.Withdraw);
-            txn.setAmount(amt);
-            txn.setAccountId(accountId);
-            if (goalId != null && !goalId.isBlank()) txn.setGoalId(goalId);
-            dao.TransactionDao.getInstance().put(txn);
-
-            return new HttpResponseBuilder().setStatus(StatusCodes.OK)
-                .setBody(new response.RestApiAppResponse<>(true, java.util.List.of(txn), "Withdraw complete"));
+        if (acc == null) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.NOT_FOUND)
+                    .setBody(new RestApiAppResponse<>(false, null, "Account not found"));
         }
 
-        // Legacy (user-level)
-        var userDao = dao.UserDao.getInstance();
-        var user = userDao.query(new org.bson.Document("userName", auth.userName)).get(0);
-        double bal = user.getBalance();
-        if (bal < amount) {
-            return new HttpResponseBuilder().setStatus("400 Bad Request")
-                .setBody(GsonTool.GSON.toJson(new response.RestApiAppResponse<>(false, "Not enough funds")));
+        var goal = GoalDao.getInstance()
+                .query(new Document("_id", new ObjectId(goalId)).append("userName", auth.userName))
+                .stream().findFirst().orElse(null);
+        if (goal == null || goal.accountId == null || !goal.accountId.equals(new ObjectId(accountId))) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.NOT_FOUND)
+                    .setBody(new RestApiAppResponse<>(false, null, "Goal not found in this account"));
         }
-        var txn = GsonTool.GSON.fromJson(request.getBody(), dto.TransactionDto.class);
-        txn.setTransactionType(dto.TransactionType.Withdraw);
-        txn.setUserId(auth.userName);
-        dao.TransactionDao.getInstance().put(txn);
-        user.setBalance(bal - txn.getAmount());
-        userDao.put(user);
+
+        double gAlloc = goal.allocatedAmount == null ? 0.0 : goal.allocatedAmount;
+        if (gAlloc < amount) {
+            return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
+                    .setBody(new RestApiAppResponse<>(false, null, "Insufficient allocated funds in this goal"));
+        }
+
+        // De-allocate only (account balance unchanged)
+        goal.allocatedAmount = gAlloc - amount;
+        GoalDao.getInstance().replace(goal.id, goal);
+
+        TransactionDto tx = new TransactionDto();
+        tx.setTransactionType(TransactionType.Withdraw);
+        tx.setUserId(auth.userName);
+        tx.setAmount(amount);
+        tx.setTimestamp(Instant.now().toEpochMilli());
+        tx.setAccountId(accountId);
+        tx.setGoalId(goalId);
+        TransactionDao.getInstance().put(tx);
 
         return new HttpResponseBuilder().setStatus(StatusCodes.OK)
-            .setBody(new response.RestApiAppResponse<>(true, java.util.List.of(txn), null));
+                .setBody(new RestApiAppResponse<>(true, tx, null));
+    }
+
+    private static String asId(com.google.gson.JsonElement el) {
+        if (el == null || el.isJsonNull()) return null;
+        if (el.isJsonPrimitive()) return el.getAsString();
+        if (el.isJsonObject() && el.getAsJsonObject().has("$oid")) {
+            return el.getAsJsonObject().get("$oid").getAsString();
+        }
+        return null;
     }
 }

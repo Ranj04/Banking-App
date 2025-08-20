@@ -1,75 +1,43 @@
 package handler.goals;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import dao.GoalDao;
-import dao.SpendDao;
 import dto.GoalDto;
 import handler.AuthFilter;
 import handler.BaseHandler;
 import handler.StatusCodes;
+import org.bson.Document;
 import request.ParsedRequest;
 import response.HttpResponseBuilder;
 import response.RestApiAppResponse;
 
-import java.time.*;
-import java.util.*;
+import java.util.List;
 
 public class ListGoalHandler implements BaseHandler {
 
-    static class GoalView {
-        public String id; // hex string id for the UI
-        public GoalDto goal;
-        public double progressAmount;
-        public double percent;
-        public String periodLabel;
-        // Newly added account fields
-        public String accountId;
-        public String accountName;
-        public String accountType;
-    }
-
-    @Override public HttpResponseBuilder handleRequest(ParsedRequest req) {
-        var auth = AuthFilter.doFilter(req);
+    @Override
+    public HttpResponseBuilder handleRequest(ParsedRequest request) {
+        var auth = AuthFilter.doFilter(request);
         if (!auth.isLoggedIn) return new HttpResponseBuilder().setStatus(StatusCodes.UNAUTHORIZED);
 
-        var goals = GoalDao.getInstance().query(new org.bson.Document("userName", auth.userName));
-        long now = System.currentTimeMillis();
+        List<GoalDto> goals = GoalDao.getInstance().query(new Document("userName", auth.userName));
 
-        LocalDate today = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate();
-        long monthStart = today.withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
-        long monthEnd   = today.plusMonths(1).withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
-        String label    = today.getMonth().toString().substring(0,1) + today.getMonth().toString().substring(1).toLowerCase() + " " + today.getYear();
-
-        var spendDao = SpendDao.getInstance();
-        List<GoalView> out = new ArrayList<>();
-
+        JsonArray arr = new JsonArray();
         for (GoalDto g : goals) {
-            GoalView v = new GoalView();
-            v.id = g.getUniqueId();
-            v.goal = g;
-            v.accountId = (g.accountId == null) ? null : g.accountId.toHexString();
-            var acc = (g.accountId == null) ? null : dao.AccountDao.getInstance().query(
-                    new org.bson.Document("_id", g.accountId)
-            ).stream().findFirst().orElse(null);
-            v.accountName = (acc != null) ? acc.name : "Unassigned";
-            v.accountType = (acc != null) ? acc.type : null;
-
-            if ("savings".equalsIgnoreCase(g.type)) {
-                double sum = g.contributions == null ? 0.0 :
-                        g.contributions.stream().mapToDouble(c -> c.amount == null ? 0.0 : c.amount).sum();
-                v.progressAmount = sum;
-                v.percent = g.targetAmount != null && g.targetAmount > 0 ? Math.min(100, (sum / g.targetAmount) * 100.0) : 0;
-                v.periodLabel = "All time";
-            } else {
-                double spent = spendDao.findForUserCategoryWindow(auth.userName, g.category, monthStart, monthEnd)
-                        .stream().mapToDouble(s -> s.amount == null ? 0.0 : s.amount).sum();
-                v.progressAmount = spent;
-                v.percent = g.targetAmount != null && g.targetAmount > 0 ? Math.min(100, (spent / g.targetAmount) * 100.0) : 0;
-                v.periodLabel = label;
-            }
-            out.add(v);
+            JsonObject o = new JsonObject();
+            o.addProperty("_id", g.id == null ? null : g.id.toHexString());
+            o.addProperty("userName", g.userName);
+            o.addProperty("accountId", g.accountId == null ? null : g.accountId.toHexString());
+            o.addProperty("name", g.name);
+            o.addProperty("allocatedAmount", g.allocatedAmount == null ? 0.0 : g.allocatedAmount);
+            if (g.targetAmount != null) o.addProperty("targetAmount", g.targetAmount);
+            if (g.dueDateMillis != null) o.addProperty("dueDateMillis", g.dueDateMillis);
+            if (g.createdAt != null) o.addProperty("createdAt", g.createdAt);
+            arr.add(o);
         }
 
         return new HttpResponseBuilder().setStatus(StatusCodes.OK)
-                .setBody(new RestApiAppResponse<>(true, out, null));
+                .setBody(new RestApiAppResponse<>(true, arr, null));
     }
 }

@@ -67,12 +67,7 @@ public class Server {
     public static String processRequest(String requestString) {
         try {
             ParsedRequest request = CustomParser.parse(requestString);
-            BaseHandler handler = HandlerFactory.getHandler(request);
-            var builder = handler.handleRequest(request);
-            builder.setHeader("Content-Type", "application/json");
-            builder.setHeader("Access-Control-Allow-Origin", "*");
-            var httpRes = builder.build();
-            return httpRes.toString();
+            return getResponse(request); // delegate to new logic
         } catch (Exception e) {
             return new HttpResponseBuilder()
                     .setStatus(StatusCodes.SERVER_ERROR)
@@ -80,5 +75,46 @@ public class Server {
                     .build()
                     .toString();
         }
+    }
+
+    private static String getResponse(ParsedRequest request) {
+        try {
+            // Handle CORS preflight
+            if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+                var origin = originFor(request);
+                var builder = new HttpResponseBuilder()
+                        .setStatus("204 No Content")
+                        .setHeader("Access-Control-Allow-Origin", origin)
+                        .setHeader("Vary", "Origin")
+                        .setHeader("Access-Control-Allow-Credentials", "true")
+                        .setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+                        .setHeader("Access-Control-Allow-Headers", "Content-Type, Cookie, Authorization");
+                return builder.build().toString();
+            }
+
+            BaseHandler handler = HandlerFactory.getHandler(request);
+            HttpResponseBuilder builder = handler.handleRequest(request);
+
+            // Default JSON + CORS headers
+            String origin = originFor(request);
+            builder.setHeader("Content-Type", "application/json");
+            builder.setHeader("Access-Control-Allow-Origin", origin);
+            builder.setHeader("Vary", "Origin");
+            builder.setHeader("Access-Control-Allow-Credentials", "true");
+
+            return builder.build().toString();
+        } catch (Exception e) {
+            return new HttpResponseBuilder()
+                    .setStatus(StatusCodes.SERVER_ERROR)
+                    .setBody(e.toString())
+                    .build()
+                    .toString();
+        }
+    }
+
+    private static String originFor(ParsedRequest req) {
+        String o = req.getHeaderValue("Origin");
+        if (o == null || o.isBlank()) return "http://localhost:3000";
+        return o;
     }
 }
