@@ -53,7 +53,8 @@ public class ListAccountsWithAllocationsHandler implements BaseHandler {
                 go.addProperty("goalId", g.id == null ? null : g.id.toHexString());
                 go.addProperty("goalName", g.name);
                 double amt = g.allocatedAmount == null ? 0.0 : g.allocatedAmount;
-                go.addProperty("amount", amt);
+                go.addProperty("allocatedAmount", amt); // new explicit field
+                go.addProperty("amount", amt);           // legacy field retained
                 go.addProperty("pct", balance > 0 ? (amt / balance) : 0.0);
                 allocs.add(go);
             }
@@ -67,4 +68,3 @@ public class ListAccountsWithAllocationsHandler implements BaseHandler {
                 .setBody(new RestApiAppResponse<>(true, out, null));
     }
 }
-

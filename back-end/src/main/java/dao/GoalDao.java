@@ -49,4 +49,13 @@ public class GoalDao extends BaseDao<GoalDto> {
 
     // Added accessor for raw collection (needed by GoalDaoExt helper)
     public MongoCollection<Document> col() { return collection; }
+
+    // New method: find goals by userName
+    public List<GoalDto> findByUser(String userName) {
+        return collection.find(new Document("userName", userName))
+                .into(new ArrayList<>())
+                .stream()
+                .map(GoalDto::fromDocument)
+                .collect(Collectors.toList());
+    }
 }
