@@ -31,10 +31,10 @@ public class TransactionsHandler implements BaseHandler {
             }
         } catch (Exception ignored) {}
 
-        // Load all accounts/goals for this user once, then map by id.
+        // Load accounts/goals once, then join locally
         List<AccountDto> accounts = AccountDao.getInstance()
                 .query(new Document("userName", auth.userName));
-        Map<String,String> accNameById = accounts.stream()
+        Map<String, String> accNameById = accounts.stream()
                 .collect(Collectors.toMap(AccountDto::getUniqueId, a -> a.name == null ? "" : a.name));
 
         List<GoalDto> goals = GoalDao.getInstance()
@@ -44,15 +44,16 @@ public class TransactionsHandler implements BaseHandler {
             if (g.id != null) goalById.put(g.id.toHexString(), g);
         }
 
-        // Fetch and sort transactions
         List<TransactionDto> raw = TransactionDao.getInstance()
                 .query(new Document("userId", auth.userName));
         raw.sort(Comparator.comparing(TransactionDto::getTimestamp).reversed());
 
-        List<Map<String,Object>> out = new ArrayList<>();
+        List<Map<String, Object>> out = new ArrayList<>();
+
         for (TransactionDto t : raw.stream().limit(limit).toList()) {
             String type = t.getTransactionType() == null ? null : t.getTransactionType().name().toLowerCase();
-            Map<String,Object> row = new LinkedHashMap<>();
+
+            Map<String, Object> row = new LinkedHashMap<>();
             row.put("_id", t.getUniqueId());
             row.put("userName", auth.userName);
             row.put("type", type);
@@ -63,10 +64,12 @@ public class TransactionsHandler implements BaseHandler {
                 String goalId = t.getGoalId();
                 String accountId = t.getAccountId();
 
-                // derive accountId via goal if missing
+                // derive account via goal if needed
                 if ((accountId == null || accountId.isBlank()) && goalId != null) {
                     GoalDto g = goalById.get(goalId);
-                    if (g != null && g.accountId != null) accountId = g.accountId.toHexString();
+                    if (g != null && g.accountId != null) {
+                        accountId = g.accountId.toHexString();
+                    }
                 }
 
                 String accountName = accountId == null ? "" : accNameById.getOrDefault(accountId, "");

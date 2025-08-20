@@ -18,7 +18,6 @@ public class TransactionDto extends BaseDto {
     private String fromGoalId;  // for transfers
     private String toGoalId;    // for transfers
 
-    // --- getters/setters ---
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
@@ -49,7 +48,7 @@ public class TransactionDto extends BaseDto {
                 .append("userId", userId)
                 .append("toId", toId)
                 .append("amount", amount)
-                .append("transactionType", transactionType.name())
+                .append("transactionType", transactionType == null ? null : transactionType.name())
                 .append("timestamp", timestamp == null ? Instant.now().toEpochMilli() : timestamp)
                 .append("accountId", accountId)
                 .append("goalId", goalId)

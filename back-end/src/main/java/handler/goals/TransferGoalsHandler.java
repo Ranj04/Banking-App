@@ -12,6 +12,7 @@ import dto.TransactionType;
 import handler.AuthFilter;
 import handler.BaseHandler;
 import handler.StatusCodes;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import request.ParsedRequest;
 import response.HttpResponseBuilder;
@@ -33,16 +34,13 @@ public class TransferGoalsHandler implements BaseHandler {
 
         if (fromGoalId == null || toGoalId == null || amount <= 0) {
             return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
-                    .setBody(new RestApiAppResponse<>(false, null,
-                            "fromGoalId, toGoalId and positive amount are required"));
+                    .setBody(new RestApiAppResponse<>(false, null, "fromGoalId, toGoalId and positive amount are required"));
         }
         if (fromGoalId.equals(toGoalId)) {
             return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
-                    .setBody(new RestApiAppResponse<>(false, null,
-                            "fromGoalId and toGoalId must be different"));
+                    .setBody(new RestApiAppResponse<>(false, null, "fromGoalId and toGoalId must be different"));
         }
 
-        // Load goals for user
         GoalDto from = GoalDaoExt.byIdForUser(new ObjectId(fromGoalId), auth.userName);
         GoalDto to   = GoalDaoExt.byIdForUser(new ObjectId(toGoalId), auth.userName);
         if (from == null || to == null) {
@@ -56,15 +54,42 @@ public class TransferGoalsHandler implements BaseHandler {
                     .setBody(new RestApiAppResponse<>(false, null, "Insufficient allocated funds in source goal"));
         }
 
-        boolean crossAccount = (from.accountId != null && to.accountId != null && !from.accountId.equals(to.accountId));
-
-        // If cross-account, validate destination account's unallocated capacity BEFORE modifying allocations
-        if (crossAccount) {
+        // Destination guard: cannot oversubscribe destination account
+        if (to.accountId != null) {
             var toAcc = AccountDao.getInstance()
-                    .query(new org.bson.Document("_id", to.accountId).append("userName", auth.userName))
+                    .query(new Document("_id", to.accountId).append("userName", auth.userName))
                     .stream().findFirst().orElse(null);
+            if (toAcc == null) {
+                return new HttpResponseBuilder().setStatus(StatusCodes.NOT_FOUND)
+                        .setBody(new RestApiAppResponse<>(false, null, "Destination account not found"));
+            }
+            double toBal = toAcc.balance == null ? 0.0 : toAcc.balance;
+            double toSumAllocated = GoalDao.getInstance()
+                    .query(new Document("userName", auth.userName).append("accountId", to.accountId))
+                    .stream().mapToDouble(g -> g.allocatedAmount == null ? 0.0 : g.allocatedAmount).sum();
+            double toUnallocated = Math.max(0.0, toBal - toSumAllocated);
+            if (amount > toUnallocated + 1e-9) {
+                return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
+                        .setBody(new RestApiAppResponse<>(false, null, "Destination account lacks unallocated funds"));
+            }
+        }
+
+        // Move allocations
+        from.allocatedAmount = fromAlloc - amount;
+        double toAlloc = to.allocatedAmount == null ? 0.0 : to.allocatedAmount;
+        to.allocatedAmount = toAlloc + amount;
+
+        GoalDao.getInstance().replace(from.id, from);
+        GoalDao.getInstance().replace(to.id, to);
+
+        // If different accounts, move balances too
+        boolean crossAccount = (from.accountId != null && to.accountId != null && !from.accountId.equals(to.accountId));
+        if (crossAccount) {
             var fromAcc = AccountDao.getInstance()
-                    .query(new org.bson.Document("_id", from.accountId).append("userName", auth.userName))
+                    .query(new Document("_id", from.accountId).append("userName", auth.userName))
+                    .stream().findFirst().orElse(null);
+            var toAcc = AccountDao.getInstance()
+                    .query(new Document("_id", to.accountId).append("userName", auth.userName))
                     .stream().findFirst().orElse(null);
             if (fromAcc == null || toAcc == null) {
                 return new HttpResponseBuilder().setStatus(StatusCodes.NOT_FOUND)
@@ -75,37 +100,11 @@ public class TransferGoalsHandler implements BaseHandler {
                 return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
                         .setBody(new RestApiAppResponse<>(false, null, "Insufficient funds in source account"));
             }
-            // Destination oversubscription guard
-            double toBalance = toAcc.balance == null ? 0.0 : toAcc.balance;
-            double toSumAllocated = GoalDao.getInstance()
-                    .query(new org.bson.Document("userName", auth.userName).append("accountId", to.accountId))
-                    .stream()
-                    .mapToDouble(g -> g.allocatedAmount == null ? 0.0 : g.allocatedAmount)
-                    .sum();
-            double toUnallocated = Math.max(0.0, toBalance - toSumAllocated);
-            if (amount > toUnallocated + 1e-9) {
-                return new HttpResponseBuilder().setStatus(StatusCodes.BAD_REQUEST)
-                        .setBody(new RestApiAppResponse<>(false, null,
-                                "Destination account lacks unallocated funds for this transfer"));
-            }
-            // Apply allocation changes
-            from.allocatedAmount = fromAlloc - amount;
-            double toAlloc = to.allocatedAmount == null ? 0.0 : to.allocatedAmount;
-            to.allocatedAmount = toAlloc + amount;
-            GoalDao.getInstance().replace(from.id, from);
-            GoalDao.getInstance().replace(to.id, to);
-            // Move balances between accounts
             fromAcc.balance = fbal - amount;
             toAcc.balance = (toAcc.balance == null ? 0.0 : toAcc.balance) + amount;
+
             AccountDao.getInstance().replace(new ObjectId(fromAcc.getUniqueId()), fromAcc);
             AccountDao.getInstance().replace(new ObjectId(toAcc.getUniqueId()), toAcc);
-        } else {
-            // Same-account transfer: total allocation unchanged, no oversubscription possible
-            from.allocatedAmount = fromAlloc - amount;
-            double toAlloc = to.allocatedAmount == null ? 0.0 : to.allocatedAmount;
-            to.allocatedAmount = toAlloc + amount;
-            GoalDao.getInstance().replace(from.id, from);
-            GoalDao.getInstance().replace(to.id, to);
         }
 
         // Record transfer
