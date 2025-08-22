@@ -41,9 +41,13 @@ public class CreateUserHandler implements BaseHandler {
         authDao.put(authDto);
 
         // Inline response object per request
+        boolean isProd = "production".equalsIgnoreCase(System.getenv("APP_ENV"));
+        String flags = isProd
+                ? "Path=/; HttpOnly; SameSite=None; Secure"
+                : "Path=/; HttpOnly; SameSite=Lax";
         return new HttpResponseBuilder()
                 .setStatus("201 Created")
-                .setHeader("Set-Cookie", "auth=" + hash + "; Path=/; HttpOnly; SameSite=Lax")
+                .setHeader("Set-Cookie", "auth=" + hash + "; " + flags)
                 .setHeader("Content-Type", "application/json")
                 .setBody(new RestApiAppResponse<>(true, "User created and logged in"));
     }

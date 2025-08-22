@@ -15,7 +15,7 @@ public class AccountDao extends BaseDao<AccountDto> {
 
     public static AccountDao getInstance() {
         if (instance != null) return instance;
-        instance = new AccountDao(MongoConnection.getCollection("AccountDao"));
+        instance = new AccountDao(MongoConnection.getCollection("Account"));
         return instance;
     }
 

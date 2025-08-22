@@ -37,6 +37,12 @@ public class AuthFilter {
             result.isLoggedIn = false;
             return result;
         }
+        long now = java.time.Instant.now().getEpochSecond();
+        if (authRes.get(0).getExpireTime() <= now) {
+            // Optional: authDao.deleteByHash(authHash);
+            result.isLoggedIn = false;
+            return result;
+        }
         result.isLoggedIn = true;
         result.userName = authRes.get(0).getUserName();
         return result;

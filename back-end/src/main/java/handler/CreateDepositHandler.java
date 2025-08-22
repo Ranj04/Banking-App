@@ -64,9 +64,11 @@ public class CreateDepositHandler implements BaseHandler {
                             "Insufficient unallocated funds in this account. Available: " + String.format("%.2f", unallocated)));
         }
 
-        // Allocate only (do NOT change account.balance)
+        // Allocate and update account balance
         goal.allocatedAmount = (goal.allocatedAmount == null ? 0.0 : goal.allocatedAmount) + amount;
         GoalDao.getInstance().replace(goal.id, goal);
+        acc.balance = (acc.balance == null ? 0.0 : acc.balance) + amount;
+        AccountDao.getInstance().replace(new org.bson.types.ObjectId(accountId), acc);
 
         var tx = new TransactionDto();
         tx.setTransactionType(TransactionType.Deposit);

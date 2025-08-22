@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class ListAccountsHandler implements BaseHandler {
-    static class View { public String id, name, type; public Double balance; }
+    static class View { public String _id, name, type; public Double balance; }
 
     @Override
     public HttpResponseBuilder handleRequest(ParsedRequest req) {
@@ -23,7 +23,7 @@ public class ListAccountsHandler implements BaseHandler {
         var list = AccountDao.getInstance().query(new Document("userName", auth.userName));
         List<View> out = list.stream().map(a -> {
             var v = new View();
-            v.id = a.getUniqueId();
+            v._id = a.getUniqueId();
             v.name = a.name;
             v.type = a.type;
             v.balance = a.balance == null ? 0.0 : a.balance;
@@ -34,4 +34,3 @@ public class ListAccountsHandler implements BaseHandler {
                 .setBody(new RestApiAppResponse<>(true, out, null));
     }
 }
-

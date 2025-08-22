@@ -1,120 +1,83 @@
 package server;
 
-import handler.BaseHandler;
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
 import handler.HandlerFactory;
-import handler.StatusCodes;
-
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.Calendar;
-
-import request.CustomParser;
 import request.ParsedRequest;
 import response.HttpResponseBuilder;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 public class Server {
+    public static void main(String[] args) throws IOException {
+        int port = 1299;
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        System.out.println("HTTP server started on port " + port);
 
-    public static void main(String[] args) {
-        Calendar.getInstance();
-        ServerSocket serverSocket;
-        Socket socket = null;
-        try {
-            serverSocket = new ServerSocket(1299);
-            System.out.println("Opened socket " + 1299);
-            while (true) {
-                // keeps listening for new clients, one at a time
-                try {
-                    socket = serverSocket.accept(); // waits for client here
-                } catch (IOException e) {
-                    System.out.println("Error opening socket");
-                    System.exit(1);
-                }
-
-                InputStream stream = socket.getInputStream();
-                byte[] b = new byte[1024 * 20];
-                stream.read(b);
-                String input = new String(b).trim();
-                System.out.println(input);
-
-                BufferedOutputStream out = new BufferedOutputStream(socket.getOutputStream());
-                PrintWriter writer = new PrintWriter(out, true);  // char output to the client
-
-                // HTTP Response
-                if (!input.isEmpty()) {
-                    writer.println(processRequest(input));
-                } else {
-                    writer.println("HTTP/1.1 200 OK");
-                    writer.println("Server: TEST");
-                    writer.println("Connection: close");
-                    writer.println("Content-type: text/html");
-                    writer.println("");
-                }
-
-                socket.close();
-            }
-        } catch (IOException e) {
-            System.out.println("Error opening socket");
-            System.exit(1);
-        }
+        // Register a generic handler for all endpoints
+        server.createContext("/", new GenericHandler());
+        server.setExecutor(null); // default executor
+        server.start();
     }
 
-    // Assume the http server feeds the entire raw http request here
-    // Response is a raw http response string
-    public static String processRequest(String requestString) {
-        try {
-            ParsedRequest request = CustomParser.parse(requestString);
-            return getResponse(request); // delegate to new logic
-        } catch (Exception e) {
-            return new HttpResponseBuilder()
-                    .setStatus(StatusCodes.SERVER_ERROR)
-                    .setBody(e.toString())
-                    .build()
-                    .toString();
-        }
-    }
-
-    private static String getResponse(ParsedRequest request) {
-        try {
+    static class GenericHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String origin = "http://localhost:3000";
             // Handle CORS preflight
-            if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-                var origin = originFor(request);
-                var builder = new HttpResponseBuilder()
-                        .setStatus("204 No Content")
-                        .setHeader("Access-Control-Allow-Origin", origin)
-                        .setHeader("Vary", "Origin")
-                        .setHeader("Access-Control-Allow-Credentials", "true")
-                        .setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-                        .setHeader("Access-Control-Allow-Headers", "Content-Type, Cookie, Authorization");
-                return builder.build().toString();
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().add("Access-Control-Allow-Origin", origin);
+                exchange.getResponseHeaders().add("Access-Control-Allow-Credentials", "true");
+                exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+                exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Cookie, Authorization");
+                exchange.sendResponseHeaders(204, -1);
+                return;
             }
 
-            BaseHandler handler = HandlerFactory.getHandler(request);
-            HttpResponseBuilder builder = handler.handleRequest(request);
+            // Parse request
+            String path = exchange.getRequestURI().getPath();
+            String method = exchange.getRequestMethod();
+            Map<String, List<String>> headers = exchange.getRequestHeaders();
+            String body = new String(exchange.getRequestBody().readAllBytes());
 
-            // Default JSON + CORS headers
-            String origin = originFor(request);
-            builder.setHeader("Content-Type", "application/json");
-            builder.setHeader("Access-Control-Allow-Origin", origin);
-            builder.setHeader("Vary", "Origin");
-            builder.setHeader("Access-Control-Allow-Credentials", "true");
+            // Build ParsedRequest for handler
+            ParsedRequest req = new ParsedRequest();
+            req.setPath(path);
+            req.setMethod(method);
+            // Set headers in ParsedRequest
+            headers.forEach((key, values) -> req.setHeaderValue(key, String.join(",", values)));
+            req.setBody(body);
 
-            return builder.build().toString();
-        } catch (Exception e) {
-            return new HttpResponseBuilder()
-                    .setStatus(StatusCodes.SERVER_ERROR)
-                    .setBody(e.toString())
-                    .build()
-                    .toString();
+            // Route to handler
+            HttpResponseBuilder respBuilder = HandlerFactory.getHandler(req).handleRequest(req);
+
+            // Set CORS headers
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", origin);
+            exchange.getResponseHeaders().add("Access-Control-Allow-Credentials", "true");
+            exchange.getResponseHeaders().add("Vary", "Origin");
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            // Set any other headers from respBuilder
+            respBuilder.getHeaders().forEach((k, v) -> exchange.getResponseHeaders().add(k, v));
+
+            // Serialize response body to JSON
+            String json = handler.GsonTool.GSON.toJson(respBuilder.getBody());
+            byte[] respBytes = json.getBytes();
+
+            // Parse status code from respBuilder.getStatus()
+            int statusCode = 200; // default
+            try {
+                statusCode = Integer.parseInt(respBuilder.getStatus().split(" ")[0]);
+            } catch (Exception ignore) {}
+            exchange.sendResponseHeaders(statusCode, respBytes.length);
+            OutputStream os = exchange.getResponseBody();
+            os.write(respBytes);
+            os.close();
         }
-    }
-
-    private static String originFor(ParsedRequest req) {
-        String o = req.getHeaderValue("Origin");
-        if (o == null || o.isBlank()) return "http://localhost:3000";
-        return o;
     }
 }

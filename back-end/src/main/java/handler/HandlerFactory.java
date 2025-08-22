@@ -19,6 +19,7 @@ public class HandlerFactory {
             case "/withdraw" -> new WithdrawHandler();
             case "/createWithdraw" -> new WithdrawHandler();            // <— NEW (alias)
             case "/savings" -> new SavingsHandler();
+            case "/getSavings" -> new GetSavingsGoalHandler();          // <— NEW
 
             case "/goals/create" -> new handler.goals.CreateGoalHandler();
             case "/goals/list" -> new handler.goals.ListGoalHandler();
@@ -32,6 +33,10 @@ public class HandlerFactory {
             case "/accounts/transfer" -> new handler.accounts.TransferBetweenAccountsHandler();
             case "/accounts/listWithAllocations" -> new handler.accounts.ListAccountsWithAllocationsHandler(); // <— NEW
             case "/accounts/listDetailed" -> new handler.accounts.ListAccountsWithAllocationsHandler(); // <— NEW (alias)
+
+            case "/auth/me" -> new WhoAmIHandler();
+            case "/auth/profile" -> new WhoAmIHandler();
+            case "/user/profile" -> new WhoAmIHandler();
 
             // Legacy generic transfer (not goal/account specific) left untouched
             default -> new FallbackHandler();

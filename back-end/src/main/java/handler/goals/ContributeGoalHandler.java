@@ -5,13 +5,14 @@ import dto.GoalDto;
 import handler.AuthFilter;
 import handler.BaseHandler;
 import handler.StatusCodes;
-import org.bson.types.ObjectId;
 import request.ParsedRequest;
 import response.HttpResponseBuilder;
 import response.RestApiAppResponse;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dao.AccountDao;
+import org.bson.types.ObjectId;
 
 public class ContributeGoalHandler implements BaseHandler {
     @Override public HttpResponseBuilder handleRequest(ParsedRequest req) {
@@ -41,7 +42,7 @@ public class ContributeGoalHandler implements BaseHandler {
 
         ObjectId goalId;
         try {
-            goalId = new ObjectId(goalIdStr);
+            goalId = new org.bson.types.ObjectId(goalIdStr);
         } catch (IllegalArgumentException ex) {
             return new HttpResponseBuilder()
                     .setStatus(StatusCodes.BAD_REQUEST)
@@ -71,9 +72,16 @@ public class ContributeGoalHandler implements BaseHandler {
         // bump allocatedAmount
         if (goal.allocatedAmount == null) goal.allocatedAmount = 0.0;
         goal.allocatedAmount += amountVal;
-
         // persist using existing replace helper (goal.id field)
         dao.replace(goal.id, goal);
+        // update parent account balance
+        var acc = AccountDao.getInstance()
+            .query(new org.bson.Document("_id", goal.accountId))
+            .stream().findFirst().orElse(null);
+        if (acc != null && acc.userName.equals(auth.userName)) {
+            acc.balance = (acc.balance == null ? 0.0 : acc.balance) + amountVal;
+            AccountDao.getInstance().replace(goal.accountId, acc);
+        }
 
         return new HttpResponseBuilder()
                 .setStatus(StatusCodes.OK)

@@ -58,9 +58,11 @@ public class WithdrawHandler implements BaseHandler {
                     .setBody(new RestApiAppResponse<>(false, null, "Insufficient allocated funds in this goal"));
         }
 
-        // De-allocate only (balance unchanged)
+        // De-allocate and update account balance
         goal.allocatedAmount = gAlloc - amount;
         GoalDao.getInstance().replace(goal.id, goal);
+        acc.balance = (acc.balance == null ? 0.0 : acc.balance) - amount;
+        AccountDao.getInstance().replace(new org.bson.types.ObjectId(accountId), acc);
 
         var tx = new TransactionDto();
         tx.setTransactionType(TransactionType.Withdraw);

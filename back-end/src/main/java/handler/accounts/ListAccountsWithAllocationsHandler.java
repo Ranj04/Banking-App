@@ -1,7 +1,5 @@
 package handler.accounts;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import dao.AccountDao;
 import dao.GoalDao;
 import dto.AccountDto;
@@ -30,7 +28,7 @@ public class ListAccountsWithAllocationsHandler implements BaseHandler {
         Map<String, List<GoalDto>> byAccount = goals.stream()
                 .collect(Collectors.groupingBy(g -> g.accountId == null ? "null" : g.accountId.toHexString()));
 
-        JsonArray out = new JsonArray();
+        List<java.util.Map<String, Object>> out = new java.util.ArrayList<>();
         for (AccountDto acc : accounts) {
             String accId = acc.getUniqueId();
             double balance = acc.balance == null ? 0.0 : acc.balance;
@@ -39,27 +37,27 @@ public class ListAccountsWithAllocationsHandler implements BaseHandler {
             double sumAllocated = gs.stream().mapToDouble(g -> g.allocatedAmount == null ? 0.0 : g.allocatedAmount).sum();
             double unallocated = Math.max(0.0, balance - sumAllocated);
 
-            JsonObject accJson = new JsonObject();
-            accJson.addProperty("_id", accId);
-            accJson.addProperty("name", acc.name);
-            accJson.addProperty("type", acc.type);
-            accJson.addProperty("balance", balance);
-            accJson.addProperty("sumAllocated", sumAllocated);
-            accJson.addProperty("unallocated", unallocated);
+            java.util.Map<String, Object> accJson = new java.util.HashMap<>();
+            accJson.put("_id", accId);
+            accJson.put("name", acc.name);
+            accJson.put("type", acc.type);
+            accJson.put("balance", balance);
+            accJson.put("sumAllocated", sumAllocated);
+            accJson.put("unallocated", unallocated);
 
-            JsonArray allocs = new JsonArray();
+            List<java.util.Map<String, Object>> allocs = new java.util.ArrayList<>();
             for (GoalDto g : gs) {
-                JsonObject go = new JsonObject();
-                go.addProperty("goalId", g.id == null ? null : g.id.toHexString());
-                go.addProperty("goalName", g.name);
+                java.util.Map<String, Object> go = new java.util.HashMap<>();
+                go.put("goalId", g.id == null ? null : g.id.toHexString());
+                go.put("goalName", g.name);
                 double amt = g.allocatedAmount == null ? 0.0 : g.allocatedAmount;
-                go.addProperty("allocatedAmount", amt); // new explicit field
-                go.addProperty("amount", amt);           // legacy field retained
-                go.addProperty("pct", balance > 0 ? (amt / balance) : 0.0);
+                go.put("allocatedAmount", amt);
+                go.put("amount", amt);           // legacy field retained
+                go.put("pct", balance > 0 ? (amt / balance) : 0.0);
                 allocs.add(go);
             }
-            accJson.add("allocations", allocs);
-            accJson.addProperty("unallocatedPct", balance > 0 ? (unallocated / balance) : 0.0);
+            accJson.put("allocations", allocs);
+            accJson.put("unallocatedPct", balance > 0 ? (unallocated / balance) : 0.0);
 
             out.add(accJson);
         }
