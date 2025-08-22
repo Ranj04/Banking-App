@@ -58,13 +58,35 @@ export default function Home() {
 
     async function reload() {
         try {
-            const accRes = await fetch('/accounts/list', { credentials: 'include' }).then(r => r.json()).catch(() => ({}));
-            setAccounts(accRes?.data || []);
-        } catch {}
+            console.log('Home: Loading accounts...');
+            const accRes = await fetch('/accounts/list', { credentials: 'include' });
+            console.log('Home: Accounts response status:', accRes.status);
+            if (accRes.ok) {
+                const data = await accRes.json();
+                console.log('Home: Accounts response data:', data);
+                if (data.success === false) {
+                    console.error('Failed to load accounts:', data.message);
+                    setAccounts([]);
+                } else {
+                    const accountsData = data?.data || [];
+                    console.log('Home: Setting accounts:', accountsData);
+                    setAccounts(accountsData);
+                }
+            } else {
+                console.error('Failed to load accounts:', accRes.status);
+                setAccounts([]);
+            }
+        } catch (error) {
+            console.error('Error loading accounts:', error);
+            setAccounts([]);
+        }
         try {
             const gls = await listGoals();
             setGoals(gls);
-        } catch {}
+        } catch (error) {
+            console.error('Error loading goals:', error);
+            setGoals([]);
+        }
         await loadRecent();
     }
 

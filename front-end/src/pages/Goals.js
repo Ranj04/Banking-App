@@ -20,27 +20,55 @@ export default function GoalsPage() {
   // --- reload(): normalize account ids robustly ---
   async function reload() {
     try {
-      const a = await fetch("/accounts/list", { credentials: "include" }).then(r => r.json());
-      const accountsRaw = Array.isArray(a.data) ? a.data : a.data?.data || a || [];
-      const accountsNorm = accountsRaw
-        .map(x => ({ _id: oid(x._id) || oid(x.id), name: x.name, balance: num(x.balance,0) }))
-        .filter(x => !!x._id);
-      setAccounts(accountsNorm);
-      setAccId(prev => prev || accountsNorm[0]?._id || "");
-    } catch {}
+      const a = await fetch("/accounts/list", { credentials: "include" });
+      if (a.ok) {
+        const data = await a.json();
+        if (data.success === false) {
+          console.error('Failed to load accounts:', data.message);
+          setAccounts([]);
+          return;
+        }
+        const accountsRaw = Array.isArray(data.data) ? data.data : data.data?.data || data || [];
+        const accountsNorm = accountsRaw
+          .map(x => ({ _id: oid(x._id) || oid(x.id), name: x.name, balance: num(x.balance,0) }))
+          .filter(x => !!x._id);
+        setAccounts(accountsNorm);
+        setAccId(prev => prev || accountsNorm[0]?._id || "");
+      } else {
+        console.error('Failed to load accounts:', a.status);
+        setAccounts([]);
+      }
+    } catch (error) {
+      console.error('Error loading accounts:', error);
+      setAccounts([]);
+    }
 
     try {
-      const g = await fetch("/goals/list", { credentials: "include" }).then(r => r.json());
-      const goalsRaw = Array.isArray(g.data) ? g.data : g.data?.data || [];
-      const goalsNorm = goalsRaw.map(x => ({
-        _id: oid(x._id) || oid(x.id),
-        accountId: oid(x.accountId) || oid(x.account?._id),
-        name: x.name || "",
-        allocatedAmount: num(x.allocatedAmount,0),
-        targetAmount: x.targetAmount != null ? num(x.targetAmount) : null,
-      }));
-      setGoals(goalsNorm);
-    } catch {}
+      const g = await fetch("/goals/list", { credentials: "include" });
+      if (g.ok) {
+        const data = await g.json();
+        if (data.success === false) {
+          console.error('Failed to load goals:', data.message);
+          setGoals([]);
+          return;
+        }
+        const goalsRaw = Array.isArray(data.data) ? data.data : data.data?.data || [];
+        const goalsNorm = goalsRaw.map(x => ({
+          _id: oid(x._id) || oid(x.id),
+          accountId: oid(x.accountId) || oid(x.account?._id),
+          name: x.name || "",
+          allocatedAmount: num(x.allocatedAmount,0),
+          targetAmount: x.targetAmount != null ? num(x.targetAmount) : null,
+        }));
+        setGoals(goalsNorm);
+      } else {
+        console.error('Failed to load goals:', g.status);
+        setGoals([]);
+      }
+    } catch (error) {
+      console.error('Error loading goals:', error);
+      setGoals([]);
+    }
   }
 
   // --- createGoal(): no more "pick a valid account"; auto-resolve id ---

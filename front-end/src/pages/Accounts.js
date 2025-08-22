@@ -144,35 +144,72 @@ export default function Accounts() {
   }
 
   const reload = async () => {
+    console.log('Accounts: reload() called');
     // Try rich endpoint first, fall back to basic
     let accountsData = [];
     try {
+      console.log('Accounts: Trying /accounts/listWithAllocations...');
       const r = await fetch('/accounts/listWithAllocations', { credentials: 'include' });
+      console.log('Accounts: listWithAllocations response status:', r.status);
       if (r.ok) {
         const j = await r.json();
+        console.log('Accounts: listWithAllocations response data:', j);
         accountsData = j?.data || [];
+        console.log('Accounts: Extracted accountsData from listWithAllocations:', accountsData);
       }
-    } catch {}
+    } catch (error) {
+      console.error('Accounts: Error loading accounts with allocations:', error);
+    }
     
     if (!accountsData.length) {
       try {
+        console.log('Accounts: Trying fallback /accounts/list...');
         const r = await fetch('/accounts/list', { credentials: 'include' });
+        console.log('Accounts: list response status:', r.status);
         if (r.ok) {
           const j = await r.json();
+          console.log('Accounts: list response data:', j);
           accountsData = j?.data || [];
+          console.log('Accounts: Extracted accountsData from list:', accountsData);
         }
-      } catch {}
+      } catch (error) {
+        console.error('Accounts: Error loading accounts fallback:', error);
+      }
     }
 
-    const [g] = await Promise.all([
-      fetch('/goals/list', { credentials: 'include' }).then(r => r.json()).catch(() => ({})),
-    ]);
+    console.log('Accounts: Final accountsData before setting state:', accountsData);
     setAccounts(accountsData);
+    console.log('Accounts: setAccounts called with:', accountsData);
+
+    const [g] = await Promise.all([
+      fetch('/goals/list', { credentials: 'include' }).then(async (r) => {
+        if (r.ok) {
+          const data = await r.json();
+          if (data.success === false || data.status === false) {
+            console.error('Failed to load goals:', data.message);
+            return { data: [] };
+          }
+          return data;
+        } else {
+          console.error('Failed to load goals:', r.status);
+          return { data: [] };
+        }
+      }).catch((error) => {
+        console.error('Error loading goals:', error);
+        return { data: [] };
+      }),
+    ]);
+    // Remove duplicate setAccounts call - accounts are already set above
     setGoals(g?.data || []);
     await loadTransactions();
   };
 
   React.useEffect(() => { reload(); }, []);
+
+  // Debug: Monitor accounts state changes
+  React.useEffect(() => {
+    console.log('Accounts: accounts state changed to:', accounts);
+  }, [accounts]);
 
   const goalsByAccount = React.useMemo(() => {
     const map = {};
@@ -207,20 +244,51 @@ export default function Accounts() {
   }, [transactions]);
 
   async function createAccount() {
-    if (!name.trim()) return;
-    await fetch('/accounts/create', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: name.trim(),
-  type: 'savings',
-        initialBalance: Number(initialBalance || 0),
-      }),
-    });
-    setName('');
-    setInitialBalance('');
-    await reload();
+    console.log('createAccount: Function called');
+    console.log('createAccount: name =', name);
+    console.log('createAccount: initialBalance =', initialBalance);
+    
+    if (!name.trim()) {
+      console.log('createAccount: Name is empty, returning early');
+      return;
+    }
+    
+    console.log('createAccount: Making fetch request to /accounts/create');
+    
+    try {
+      const response = await fetch('/accounts/create', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          type: 'savings',
+          initialBalance: Number(initialBalance || 0),
+        }),
+      });
+      
+      console.log('createAccount: Response received, status:', response.status);
+      
+      const data = await response.json();
+      console.log('createAccount: Response data:', data);
+      
+      if (data.success === false || data.status === false) {
+        console.error('Failed to create account:', data.message);
+        return;
+      }
+      
+      if (!response.ok) {
+        console.error('Failed to create account:', data.message || response.status);
+        return;
+      }
+      
+      console.log('createAccount: Account created successfully, clearing form and reloading');
+      setName('');
+      setInitialBalance('');
+      await reload();
+    } catch (error) {
+      console.error('Error creating account:', error);
+    }
   }
 
   return (

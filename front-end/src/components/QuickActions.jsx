@@ -36,6 +36,7 @@ function QuickActions({ onAnyChange }) {
   const [mode, setMode] = useState("deposit");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState({kind:"ok", text:""});
+  const [transferToGoal, setTransferToGoal] = useState("");
 
   const setFlash = (kind, text) => {
     setMsg({ kind, text });
@@ -46,15 +47,46 @@ function QuickActions({ onAnyChange }) {
     (async () => {
       // 1) accounts
       let acc = [];
+      console.log('QuickActions: Loading accounts...');
       try {
         let r = await fetch("/accounts/listWithAllocations", { credentials: "include" });
-        if (!r.ok) throw new Error();
-        acc = await r.json();
-      } catch {
-        const r2 = await fetch("/accounts/list", { credentials: "include" });
-        acc = await r2.json();
+        console.log('QuickActions: Accounts with allocations response status:', r.status);
+        if (r.ok) {
+          const data = await r.json();
+          console.log('QuickActions: Accounts with allocations response data:', data);
+          if (data.success === false) {
+            console.error('Failed to load accounts with allocations:', data.message);
+            throw new Error('Failed to load accounts with allocations');
+          }
+          acc = data;
+        } else {
+          throw new Error(`Failed to load accounts with allocations: ${r.status}`);
+        }
+      } catch (error) {
+        console.error('Error loading accounts with allocations, trying fallback:', error);
+        try {
+          const r2 = await fetch("/accounts/list", { credentials: "include" });
+          console.log('QuickActions: Fallback accounts response status:', r2.status);
+          if (r2.ok) {
+            const data = await r2.json();
+            console.log('QuickActions: Fallback accounts response data:', data);
+            if (data.success === false) {
+              console.error('Failed to load accounts:', data.message);
+              acc = { data: [] };
+            } else {
+              acc = data;
+            }
+          } else {
+            console.error('Failed to load accounts:', r2.status);
+            acc = { data: [] };
+          }
+        } catch (fallbackError) {
+          console.error('Error loading accounts fallback:', fallbackError);
+          acc = { data: [] };
+        }
       }
       acc = Array.isArray(acc.data) ? acc.data : Array.isArray(acc) ? acc : [];
+      console.log('QuickActions: Processed accounts array:', acc);
       acc = acc.map(a => ({
         _id: oid(a._id) || oid(a.id),
         name: a.name || "Savings",
@@ -62,14 +94,29 @@ function QuickActions({ onAnyChange }) {
         sumAllocated: num(a.sumAllocated, 0),
         unallocated: a.unallocated != null ? num(a.unallocated,0) : Math.max(0, num(a.balance,0) - num(a.sumAllocated,0)),
       })).filter(a => a._id);
+      console.log('QuickActions: Final processed accounts:', acc);
 
       // 2) goals
       let gl = [];
       try {
         const r = await fetch("/goals/list", { credentials: "include" });
-        const j = await r.json();
-        gl = Array.isArray(j.data) ? j.data : Array.isArray(j) ? j : [];
-      } catch {}
+        if (r.ok) {
+          const data = await r.json();
+          if (data.success === false) {
+            console.error('Failed to load goals:', data.message);
+            gl = { data: [] };
+          } else {
+            gl = data;
+          }
+        } else {
+          console.error('Failed to load goals:', r.status);
+          gl = { data: [] };
+        }
+      } catch (error) {
+        console.error('Error loading goals:', error);
+        gl = { data: [] };
+      }
+      gl = Array.isArray(gl.data) ? gl.data : Array.isArray(gl) ? gl : [];
       gl = gl.map(g => ({
         _id: oid(g._id) || oid(g.id),
         accountId: oid(g.accountId) || oid(g.account?._id),
@@ -121,15 +168,20 @@ function QuickActions({ onAnyChange }) {
   async function doAction(endpoint, okMsg) {
     setLoading(true);
     try {
+      const body = endpoint === "/goals/transfer" 
+        ? { accountId, goalId, amount: amt, transferToGoal }
+        : { accountId, goalId, amount: amt };
+        
       const res = await fetch(endpoint, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId, goalId, amount: amt })
+        body: JSON.stringify(body)
       });
       const j = await res.json().catch(()=>({}));
       if (!res.ok || j?.success === false) throw new Error(j?.message || j?.error || "Request failed");
       setAmount("");
+      setTransferToGoal(""); // Reset transfer selection
       setFlash("ok", okMsg);
       onAnyChange?.();
       // refresh unallocated/allocated quickly
@@ -199,11 +251,39 @@ function QuickActions({ onAnyChange }) {
       </div>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-        <button className="btn btn--primary" onClick={() => doAction("/createDeposit", `Deposited $${fmt(amt)} successfully.`)} disabled={!canDeposit}>
+        <button className="btn btn--primary" onClick={() => doAction("/deposit", `Deposited $${fmt(amt)} successfully.`)} disabled={!canDeposit}>
           {loading && mode==='deposit' ? "Depositing…" : "Confirm deposit"}
         </button>
         <button className="btn" onClick={() => doAction("/withdraw", `Withdrew $${fmt(amt)} successfully.`)} disabled={!canWithdraw}>
           {loading && mode==='withdraw' ? "Withdrawing…" : "Confirm withdraw"}
+        </button>
+        <button className="btn btn--ghost" onClick={() => doAction("/goals/contribute", `Contributed $${fmt(amt)} to goal successfully.`)} disabled={!canDeposit || !goalId}>
+          {loading ? "Contributing…" : "Contribute to Goal"}
+        </button>
+      </div>
+
+      {/* Transfer between goals */}
+      <div style={{ marginTop: 16, padding: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem' }}>Transfer between Goals</h4>
+        <select 
+          className="select select--native" 
+          style={{ width: "100%", marginBottom: 8 }}
+          onChange={e => setTransferToGoal(e.target.value)}
+        >
+          <option value="">Select goal to transfer to...</option>
+          {goals.filter(g => g._id !== goalId).map(g => (
+            <option key={g._id} value={g._id}>
+              {g.name} — ${fmt(g.allocatedAmount)}
+            </option>
+          ))}
+        </select>
+        <button 
+          className="btn btn--ghost" 
+          style={{ width: "100%" }}
+          onClick={() => doAction("/goals/transfer", `Transferred $${fmt(amt)} between goals successfully.`)} 
+          disabled={!canDeposit || !goalId || !transferToGoal}
+        >
+          {loading ? "Transferring…" : "Transfer to Goal"}
         </button>
       </div>
 

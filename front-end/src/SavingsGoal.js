@@ -2,86 +2,105 @@ import React, { useState } from "react";
 
 const SavingsGoal = () => {
   const [goal, setGoal] = useState({ targetAmount: "", deadline: "" });
+  const [message, setMessage] = useState({ type: "", text: "" });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setGoal({ ...goal, [name]: value });
   };
 
-  function getSavingsGoals() {
-    const httpSetting = {
-        method: 'GET',
-        credentials: 'include',
-    };
-
-    fetch('/getSavings', httpSetting)
-        .then(res => res.json())
-        .then((apiResult) => {
-            console.log(apiResult);
-            setGoal(apiResult.data);
-        })
-        .catch((e) => {
-            console.log(e)
-        })
-  };
+  async function getSavingsGoals() {
+    try {
+      const res = await fetch('/goals/list', { credentials: 'include' });
+      const data = await res.json();
+      
+      if (data.success === false) {
+        setMessage({ type: "error", text: data.message || "Failed to fetch goals" });
+        return;
+      }
+      
+      const goalsData = data.data || data;
+      if (Array.isArray(goalsData)) {
+        setGoal(goalsData[0] || { targetAmount: "", deadline: "" });
+        setMessage({ type: "success", text: "Goals loaded successfully" });
+      } else {
+        setGoal(goalsData);
+        setMessage({ type: "success", text: "Goal loaded successfully" });
+      }
+    } catch (error) {
+      console.error("Error fetching goals:", error);
+      setMessage({ type: "error", text: "Failed to fetch goals" });
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const timestamp = new Date(goal.deadline).getTime(); // Convert deadline to numeric timestamp
 
     if (isNaN(timestamp)) {
-        console.error("Invalid date format");
-        return;
+      setMessage({ type: "error", text: "Invalid date format" });
+      return;
     }
+    
     const payload = {
-        targetAmount: goal.targetAmount,
-        deadline: timestamp, // Send numeric timestamp
+      targetAmount: goal.targetAmount,
+      deadline: timestamp, // Send numeric timestamp
     };
+    
     try {
-        const response = await fetch("/savings", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
+      const response = await fetch("/goals/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (!response.ok) {
-            console.error("Error response:", data.message);
-            return;
-        }
+      if (data.success === false) {
+        setMessage({ type: "error", text: data.message || "Failed to create goal" });
+        return;
+      }
 
-        console.log("Savings goal created:", data);
+      if (!response.ok) {
+        setMessage({ type: "error", text: data.message || "Error creating goal" });
+        return;
+      }
+
+      setMessage({ type: "success", text: "Savings goal created successfully!" });
+      console.log("Savings goal created:", data);
     } catch (error) {
-        console.error("Request failed:", error);
+      console.error("Request failed:", error);
+      setMessage({ type: "error", text: "Request failed. Please try again." });
     }
-};
+  };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label>
-        Target Amount:
-        <input
-          type="number"
-          name="targetAmount"
-          value={goal.targetAmount}
-          onChange={handleInputChange}
-        />
-      </label>
-      <br />
-      <label>
-        Deadline (mm/dd/yyyy):
-        <input
-          type="date"
-          name="deadline"
-          value={goal.deadline}
-          onChange={handleInputChange}
-        />
-      </label>
-      <br />
-      <button type="submit">Set Goal</button>
-      <button onClick={getSavingsGoals}>Show Current Goals</button>
-    </form>
+    <div>
+      <form onSubmit={handleSubmit}>
+        <label>
+          Target Amount:
+          <input
+            type="number"
+            name="targetAmount"
+            value={goal.targetAmount}
+            onChange={handleInputChange}
+          />
+        </label>
+        <br />
+        <label htmlFor="date">Date (yyyy-mm-dd):</label>
+        <input id="date" type="date" name="deadline" value={goal.deadline} onChange={handleInputChange} />
+        <br />
+        <button type="submit">Set Goal</button>
+        <button type="button" onClick={getSavingsGoals}>Show Current Goals</button>
+      </form>
+      
+      {message.text && (
+        <div className={`alert ${message.type === "success" ? "success" : "error"}`}>
+          {message.text}
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -24,8 +24,18 @@ export default function Navbar({ onLogout }) {
   async function handleLogout() {
     if (typeof onLogout === "function") onLogout();
     try {
-      await fetch('/logout', { method: 'POST', credentials: 'include' });
-    } catch {}
+      const response = await fetch('/logout', { method: 'POST', credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success === false) {
+          console.error('Logout failed:', data.message);
+        }
+      } else {
+        console.error('Logout failed:', response.status);
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
     try { localStorage.removeItem('userName'); } catch {}
     navigate("/"); // back to login
   }
